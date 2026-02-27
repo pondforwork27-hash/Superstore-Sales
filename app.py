@@ -594,4 +594,246 @@ fig_ab = go.Figure()
 fig_ab.add_trace(go.Scatter(
     x=ma["Month"], y=ma["Sales"], name=f"🔵 {val_a}",
     line=dict(color="#4299e1", width=2.5), mode="lines+markers",
-    hovertemplate=f"<b>{val_a
+    hovertemplate=f"<b>{val_a}</b><br>%{{x}}<br>Sales: $%{{y:,.0f}}<extra></extra>"
+))
+fig_ab.add_trace(go.Scatter(
+    x=mb["Month"], y=mb["Sales"], name=f"🔴 {val_b}",
+    line=dict(color="#e94560", width=2.5), mode="lines+markers",
+    hovertemplate=f"<b>{val_b}</b><br>%{{x}}<br>Sales: $%{{y:,.0f}}<extra></extra>"
+))
+fig_ab.update_layout(
+    title=dict(text="Monthly Sales — A vs B", font=dict(size=13), x=0.5),
+    xaxis_tickangle=-45,
+    yaxis=dict(tickprefix="$", tickformat=",.0f"),
+    legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5),
+    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+    margin=dict(l=10, r=10, t=40, b=10), height=320
+)
+st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
+
+# ── Category breakdown side by side (FIXED HOVER - NO DUPLICATE LABELS) ─────
+# Calculate both sales and order counts for each category
+ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
+ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
+
+# Add order count data
+ab_cat_a_orders = grp_a.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
+ab_cat_b_orders = grp_b.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
+
+# Merge sales and order data
+ab_cat_a = ab_cat_a_sales.merge(ab_cat_a_orders, on="Category", how="left")
+ab_cat_b = ab_cat_b_sales.merge(ab_cat_b_orders, on="Category", how="left")
+
+# Fill any missing order counts with 0
+ab_cat_a["Order Count"] = ab_cat_a["Order Count"].fillna(0).astype(int)
+ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
+
+# Combine for plotting
+ab_cat = pd.concat([ab_cat_a, ab_cat_b])
+
+fig_cat_ab = px.bar(
+    ab_cat, 
+    x="Category", 
+    y="Sales", 
+    color="Group", 
+    barmode="group",
+    color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
+    labels={"Sales": "Total Sales ($)", "Group": ""},
+)
+
+# Fix hover template for Group A bars
+fig_cat_ab.update_traces(
+    hovertemplate="<b>%{x}</b><br>" +
+                  f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
+                  "<extra></extra>",
+    customdata=ab_cat_a[['Order Count']].values,
+    selector={"name": val_a}
+)
+
+# Fix hover template for Group B bars
+fig_cat_ab.update_traces(
+    hovertemplate="<b>%{x}</b><br>" +
+                  f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
+                  "<extra></extra>",
+    customdata=ab_cat_b[['Order Count']].values,
+    selector={"name": val_b}
+)
+
+fig_cat_ab.update_layout(
+    title=dict(text="Category Breakdown — A vs B", font=dict(size=13), x=0.5),
+    legend=dict(
+        orientation="h", 
+        yanchor="bottom", 
+        y=-0.25, 
+        xanchor="center", 
+        x=0.5,
+    ),
+    plot_bgcolor="rgba(0,0,0,0)", 
+    paper_bgcolor="rgba(0,0,0,0)",
+    yaxis=dict(
+        tickprefix="$", 
+        tickformat=",.0f",
+        gridcolor='rgba(128,128,128,0.2)'
+    ),
+    # HIDE THE X-AXIS CATEGORY LABELS
+    xaxis=dict(
+        showticklabels=False,    # Hide tick labels
+        showgrid=False,          # Hide grid lines
+        zeroline=False,          # Hide zero line
+        showline=False,          # Hide axis line
+        title=""                 # Remove title
+    ),
+    margin=dict(l=10, r=10, t=40, b=30), 
+    height=350,
+    hovermode="x",  # Shows hover for individual bars
+    hoverlabel=dict(
+        bgcolor="#1e3a5f",
+        font_size=12,
+        font_color="white",
+        bordercolor="#4299e1"
+    )
+)
+
+st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
+
+# Add custom category labels below the chart (ONLY ONCE - DYNAMIC)
+categories = sorted(filtered_df['Category'].unique())
+category_icons = {
+    'Furniture': '📦',
+    'Office Supplies': '📎',
+    'Technology': '💻'
+}
+
+labels_html = '<div style="display:flex; justify-content:space-around; margin-top:-15px; margin-bottom:10px; padding:0 20px;">'
+for cat in categories:
+    icon = category_icons.get(cat, '📊')
+    labels_html += f'''
+    <div style="text-align:center; background:#0d1b2a; padding:5px 15px; border-radius:20px; border:1px solid #2d4a6b;">
+        <span style="color:#90cdf4; font-size:0.85rem;">{icon} {cat}</span>
+    </div>
+    '''
+labels_html += '</div>'
+
+st.markdown(labels_html, unsafe_allow_html=True)
+
+# ── Insight summary ───────────────────────────────────────────────────────────
+winner     = val_a if sa["total"] > sb["total"] else val_b
+winner_tot = max(sa["total"], sb["total"])
+loser_tot  = min(sa["total"], sb["total"])
+gap_pct    = abs(_delta(sa["total"], sb["total"]))
+
+st.markdown(f"""
+<div class="insight-card good">
+  <div class="icon">🏆</div>
+  <div class="label">A/B Winner — Total Sales</div>
+  <div class="value">{winner}</div>
+  <div class="detail">
+    <strong>{winner}</strong> outperforms by <strong>{gap_pct:.1f}%</strong>
+    (${winner_tot:,.0f} vs ${loser_tot:,.0f}).
+    Top category: <strong>{sa["top_cat"] if winner == val_a else sb["top_cat"]}</strong> ·
+    Top sub-category: <strong>{sa["top_sub"] if winner == val_a else sb["top_sub"]}</strong> ·
+    Strongest state: <strong>{sa["top_st"] if winner == val_a else sb["top_st"]}</strong>.
+  </div>
+</div>""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ── TRENDS ────────────────────────────────────────────────────────────────────
+st.header("📈 Sales Trends & Sub-Category Deep Dive")
+col3, col4 = st.columns(2)
+
+with col3:
+    st.subheader("Monthly Sales Trend")
+    monthly_sales['label'] = monthly_sales['Sales'].apply(
+        lambda v: f"${v/1000:.0f}K" if v >= 1000 else f"${v:.0f}"
+    )
+    fig_line = px.line(monthly_sales, x='Month', y='Sales', markers=True,
+                       text='label', labels={'Sales':'Total Sales ($)','Month':''})
+    fig_line.update_traces(
+        line_color='#4299e1', line_width=2.5,
+        marker=dict(size=7, color='#4299e1'),
+        textposition='top center', textfont=dict(size=10, color='#90cdf4'),
+        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>"
+    )
+    fig_line.update_layout(
+        xaxis_tickangle=-45,
+        yaxis=dict(tickprefix="$", tickformat=",.0f"),
+        yaxis_range=[0, monthly_sales['Sales'].max() * 1.18]
+    )
+    st.plotly_chart(fig_line, use_container_width=True, key="line_trend")
+
+    if len(monthly_sales) >= 2:
+        pct_chg = ((monthly_sales.iloc[-1]['Sales'] - monthly_sales.iloc[0]['Sales'])
+                   / monthly_sales.iloc[0]['Sales'] * 100)
+        card_cls   = "good" if pct_chg > 0 else "alert"
+        trend_word = "grown" if pct_chg > 0 else "declined"
+        advice     = "Momentum is positive — consider scaling inventory." if pct_chg > 0 else "Investigate demand drivers and revisit pricing strategy."
+        st.markdown(f'<div class="insight-card {card_cls}"><div class="icon">📈</div><div class="label">Trend Insight</div><div class="value">{abs(pct_chg):.1f}% {"▲" if pct_chg > 0 else "▼"} over period</div><div class="detail">Sales have <strong>{trend_word} {abs(pct_chg):.1f}%</strong> from first to last month. {advice}</div></div>', unsafe_allow_html=True)
+
+with col4:
+    st.subheader("Sub-Category Sales Ranking")
+    subcat_sorted = subcat_sales.sort_values('Sales', ascending=False)
+    fig_subcat = px.bar(subcat_sorted, x='Sub-Category', y='Sales',
+                        color='Sales', color_continuous_scale='Teal', labels={'Sales':'Total Sales ($)'})
+    fig_subcat.update_traces(hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>")
+    fig_subcat.update_layout(xaxis_tickangle=-45, coloraxis_showscale=False)
+    st.plotly_chart(fig_subcat, use_container_width=True, key="bar_subcat")
+
+    bottom_subcat = subcat_sorted.iloc[-1]
+    st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement or consider deprioritizing stock.</div></div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ── REGION × SEGMENT ──────────────────────────────────────────────────────────
+st.header("🌎 Region vs. Segment Matrix")
+fig_grouped = px.bar(region_seg, x='Region', y='Sales', color='Segment',
+                     barmode='group', color_discrete_sequence=px.colors.qualitative.Set2,
+                     labels={'Sales':'Total Sales ($)'})
+fig_grouped.update_traces(hovertemplate="<b>%{x}</b><br>Segment: %{fullData.name}<br>Sales: $%{y:,.0f}<extra></extra>")
+st.plotly_chart(fig_grouped, use_container_width=True, key="grouped_region_seg")
+
+best_rs  = region_seg.sort_values('Sales', ascending=False).iloc[0]
+worst_rs = region_seg.sort_values('Sales').iloc[0]
+st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest performer: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}) — a clear opportunity for targeted growth campaigns.</div></div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ── CITIES TABLE with STATE column ────────────────────────────────────────────
+st.header("🏙️ Top Cities by Sales")
+
+_city_mask = pd.Series([True] * len(df), index=df.index)
+if sel_region:   _city_mask &= df['Region'].isin(sel_region)
+if sel_category: _city_mask &= df['Category'].isin(sel_category)
+if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
+if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
+_city_base = df[_city_mask]
+
+# Updated aggregation to include State
+_agg = _city_base.groupby(['City', 'State']).agg(
+    **{
+        'Total Sales': ('Sales',       'sum'),
+        'Orders':      ('Order ID',    'nunique'),
+        'Customers':   ('Customer ID', 'nunique'),
+    }
+).reset_index()
+_agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
+_agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
+_agg.index += 1
+
+# Reorder columns to show State after City
+_agg = _agg[['City', 'State', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
+
+st.dataframe(
+    _agg.style.format({
+        'Total Sales': '${:,.2f}',
+        'Avg Order':   '${:,.2f}',
+        'Orders':      '{:,}',
+        'Customers':   '{:,}',
+    }),
+    use_container_width=True,
+    height=420,
+)
