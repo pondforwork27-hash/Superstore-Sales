@@ -472,19 +472,113 @@ fig_map.update_layout(
     margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)',
     coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$"),
     showlegend=False,
+    clickmode='event+select',  # Enable click events
 )
-map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map")
 
-if map_event and map_event.selection and map_event.selection.get("points"):
-    pt = map_event.selection["points"][0]
-    clicked_abbrev = pt.get("location")
-    if clicked_abbrev:
-        new_state = abbrev_to_state.get(clicked_abbrev)
-        if new_state and new_state != st.session_state.clicked_state:
+# Create a container for the map with a unique key
+map_container = st.container()
+
+with map_container:
+    # Use plotly_chart with on_select but we'll also add custom click handling via HTML/JS
+    st.plotly_chart(fig_map, use_container_width=True, key="choropleth_map")
+
+# Add custom JavaScript to handle direct clicks on the map
+st.components.v1.html("""
+<script>
+// Function to handle map clicks
+function setupMapClickHandler() {
+    // Find the map container
+    const mapContainer = document.querySelector('[data-testid="stPlotlyChart"]');
+    if (!mapContainer) {
+        setTimeout(setupMapClickHandler, 500);
+        return;
+    }
+    
+    // Add click event listener to the map
+    mapContainer.addEventListener('click', function(e) {
+        // Find the closest state element that was clicked
+        const stateElement = e.target.closest('.choroplethlocation');
+        if (stateElement) {
+            // Get the state code from the data attribute
+            const stateCode = stateElement.getAttribute('data-location');
+            if (stateCode) {
+                // Create a hidden input to communicate with Streamlit
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.id = 'map-clicked-state';
+                input.value = stateCode;
+                document.body.appendChild(input);
+                
+                // Trigger a custom event that Streamlit can listen for
+                const event = new CustomEvent('map-state-clicked', { detail: stateCode });
+                document.dispatchEvent(event);
+            }
+        }
+    });
+}
+
+// Run when the page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMapClickHandler);
+} else {
+    setupMapClickHandler();
+}
+</script>
+""", height=0)
+
+# Handle map clicks via session state updates
+if st.session_state.get("map_clicked_state"):
+    clicked_abbrev = st.session_state.map_clicked_state
+    new_state = abbrev_to_state.get(clicked_abbrev)
+    if new_state:
+        if new_state != st.session_state.clicked_state:
             st.session_state.clicked_state = new_state
-            st.rerun()
-        elif new_state == st.session_state.clicked_state:
+        else:
             st.session_state.clicked_state = None
+        # Clear the clicked state to prevent re-processing
+        st.session_state.map_clicked_state = None
+        st.rerun()
+
+# Alternative approach using Plotly's click event
+# We can also use the on_select parameter with a custom handler
+if "map_click" not in st.session_state:
+    st.session_state.map_click = None
+
+# Create a callback function for map clicks
+def handle_map_click(click_data):
+    if click_data and click_data.get("points"):
+        point = click_data["points"][0]
+        location = point.get("location")
+        if location:
+            st.session_state.map_click = location
+            st.rerun()
+
+# Display the map with click handling
+fig_map.update_layout(
+    clickmode='event+select',
+    hovermode='closest'
+)
+
+# Use plotly_chart with on_select
+map_click_data = st.plotly_chart(
+    fig_map, 
+    use_container_width=True, 
+    key="choropleth_map_v2",
+    on_select="rerun",
+    selection_mode="points"
+)
+
+# Process the click data
+if map_click_data and map_click_data.selection and map_click_data.selection.get("points"):
+    point = map_click_data.selection["points"][0]
+    location = point.get("location")
+    if location:
+        new_state = abbrev_to_state.get(location)
+        if new_state:
+            if new_state != st.session_state.clicked_state:
+                st.session_state.clicked_state = new_state
+            else:
+                st.session_state.clicked_state = None
             st.rerun()
 
 st.markdown(f"""
@@ -496,8 +590,6 @@ st.markdown(f"""
   <strong>{state_share:.1f}%</strong> of total revenue in this selection.</div>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("---")
 
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
@@ -890,3 +982,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
