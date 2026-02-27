@@ -284,13 +284,138 @@ with col1:
 
 with col2:
     st.subheader("Category & Segment Mix")
-    st.caption("✅ Data verified — Consumer/Corporate/Home Office each appear once per category (inner ring = category, outer ring = segment within that category)")
-    sunburst_df = filtered_df.groupby(['Category', 'Segment'])['Sales'].sum().reset_index()
-    fig_sun = px.sunburst(sunburst_df, path=['Category', 'Segment'], values='Sales',
-                          color='Sales', color_continuous_scale='Blues')
-    fig_sun.update_traces(hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>")
-    fig_sun.update_layout(coloraxis_showscale=False)
+    fig_sun = px.sunburst(
+        filtered_df.groupby(['Category', 'Segment'])['Sales'].sum().reset_index(),
+        path=['Category', 'Segment'], values='Sales', color='Segment',
+        color_discrete_map={
+            "Consumer":      "#1a56a0",
+            "Corporate":     "#4299e1",
+            "Home Office":   "#90cdf4",
+        }
+    )
+    fig_sun.update_traces(
+        hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
+        textfont=dict(size=11)
+    )
+    fig_sun.update_layout(showlegend=True, legend=dict(
+        orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5,
+        font=dict(size=11), title=dict(text="Segment  ", font=dict(size=11))
+    ))
     st.plotly_chart(fig_sun, use_container_width=True, key="sunburst_cat")
+    st.markdown('''
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:-8px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#1a56a0;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Consumer</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#4299e1;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Corporate</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#90cdf4;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Home Office</span>
+      </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+st.markdown("---")
+# ── CORRELATION SECTION ───────────────────────────────────────────────────────
+st.header("🔗 Segment × Category Correlation")
+st.caption("How strongly do spending patterns across segments track each other? A score near 1.0 means the two segments rise and fall together.")
+
+corr_cols = st.columns([1.1, 1, 0.9])
+
+with corr_cols[0]:
+    # Heatmap: segment vs segment correlation (monthly sales)
+    import numpy as np
+    monthly_seg = filtered_df.copy()
+    monthly_seg['Month'] = monthly_seg['Order Date'].dt.to_period('M').astype(str)
+    monthly_seg_pivot = monthly_seg.groupby(['Month','Segment'])['Sales'].sum().unstack(fill_value=0)
+    corr_matrix = monthly_seg_pivot.corr()
+
+    fig_heat = go.Figure(go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns.tolist(),
+        y=corr_matrix.index.tolist(),
+        colorscale=[
+            [0.0, "#0d1b2a"], [0.4, "#1e3a5f"],
+            [0.7, "#2b6cb0"], [1.0, "#90cdf4"]
+        ],
+        zmin=0, zmax=1,
+        text=[[f"{v:.2f}" for v in row] for row in corr_matrix.values],
+        texttemplate="%{text}",
+        textfont=dict(size=14, color="white"),
+        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>",
+        showscale=True,
+        colorbar=dict(title="r", thickness=12, len=0.7)
+    ))
+    fig_heat.update_layout(
+        title=dict(text="Monthly Sales Correlation by Segment", font=dict(size=13), x=0.5),
+        xaxis=dict(side="bottom"),
+        margin=dict(l=10, r=10, t=40, b=10),
+        height=280
+    )
+    st.plotly_chart(fig_heat, use_container_width=True, key="corr_heatmap")
+
+with corr_cols[1]:
+    # Grouped bar: each segment's split across categories
+    seg_cat_df = filtered_df.groupby(['Segment','Category'])['Sales'].sum().reset_index()
+    seg_cat_df['Share'] = seg_cat_df.groupby('Segment')['Sales'].transform(lambda x: x / x.sum() * 100)
+    fig_segcat = px.bar(
+        seg_cat_df, x='Segment', y='Share', color='Category',
+        barmode='stack',
+        color_discrete_sequence=["#1a56a0", "#4299e1", "#90cdf4"],
+        labels={'Share': '% of Segment Sales', 'Segment': ''}
+    )
+    fig_segcat.update_traces(hovertemplate="<b>%{x}</b><br>Category: %{fullData.name}<br>Share: %{y:.1f}%<extra></extra>")
+    fig_segcat.update_layout(
+        title=dict(text="Category Mix per Segment (%)", font=dict(size=13), x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5, font=dict(size=10)),
+        yaxis=dict(ticksuffix="%"),
+        margin=dict(l=10, r=10, t=40, b=10),
+        height=280
+    )
+    st.plotly_chart(fig_segcat, use_container_width=True, key="seg_cat_mix")
+
+with corr_cols[2]:
+    # Insight cards derived from correlation
+    segs = corr_matrix.columns.tolist()
+    pairs = [(segs[i], segs[j], corr_matrix.iloc[i,j])
+             for i in range(len(segs)) for j in range(i+1, len(segs))]
+    pairs.sort(key=lambda x: x[2], reverse=True)
+    strongest = pairs[0]
+    weakest   = pairs[-1]
+
+    st.markdown(f"""
+    <div class="insight-card good" style="margin-top:8px;">
+      <div class="icon">📈</div>
+      <div class="label">Strongest Correlation</div>
+      <div class="value" style="font-size:1.1rem;">{strongest[0]} × {strongest[1]}</div>
+      <div class="detail">r = <strong>{strongest[2]:.2f}</strong> — these segments move almost in lockstep monthly. Campaigns that boost one will likely lift the other.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="insight-card warn">
+      <div class="icon">📉</div>
+      <div class="label">Weakest Correlation</div>
+      <div class="value" style="font-size:1.1rem;">{weakest[0]} × {weakest[1]}</div>
+      <div class="detail">r = <strong>{weakest[2]:.2f}</strong> — these segments behave more independently. Tailored, separate strategies are recommended.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Category balance insight
+    cat_pivot = filtered_df.groupby(['Segment','Category'])['Sales'].sum().unstack(fill_value=0)
+    most_balanced = (cat_pivot.div(cat_pivot.sum(axis=1), axis=0).std(axis=1)).idxmin()
+    st.markdown(f"""
+    <div class="insight-card">
+      <div class="icon">⚖️</div>
+      <div class="label">Most Balanced Buyer</div>
+      <div class="value" style="font-size:1.1rem;">{most_balanced}</div>
+      <div class="detail">This segment distributes spend most evenly across all three categories — lowest variance in category mix.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.header("📈 Sales Trends & Sub-Category Deep Dive")
