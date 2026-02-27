@@ -923,7 +923,7 @@ _agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
 _agg.index += 1
 
 # Reorder columns to show State after City
-_agg = _agg[['City', 'State', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
+_agg = _agg[['State', 'City', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
 
 st.dataframe(
     _agg.style.format({
@@ -935,6 +935,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
