@@ -240,8 +240,6 @@ if st.session_state.clicked_state:
 
 # ── BUILD filtered_df ───────────────────────────────────────────────────────
 mask = pd.Series([True] * len(df), index=df.index)
-_active_regions = list(set(sel_region) | set(st.session_state.sel_region_card))
-if _active_regions: mask &= df['Region'].isin(_active_regions)
 if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if sel_year:     mask &= df['Year'].isin(sel_year)
@@ -824,3 +822,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
