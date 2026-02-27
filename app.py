@@ -23,14 +23,12 @@ st.markdown("""
     box-shadow: 0 8px 30px rgba(0,0,0,0.35);
     position: relative; overflow: hidden;
 }
-/* ── Filter label and input text colors ── */
 .filter-bar label { color: #ffffff !important; font-size: 0.75rem !important; font-weight: 600 !important; }
 .filter-bar [data-baseweb="select"] input { color: #ffffff !important; }
 .filter-bar [data-baseweb="select"] input::placeholder { color: #ffffff !important; opacity: 1 !important; }
 .filter-bar [data-baseweb="select"] [class$="placeholder"],
 .filter-bar [data-baseweb="select"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
 [data-testid="stMultiSelect"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
-/* ── Multiselect selected tags ── */
 span[data-baseweb="tag"] {
     background: linear-gradient(135deg, #2d6080, #3a7a9e) !important;
     border: 1px solid #a8d4f0 !important;
@@ -39,7 +37,6 @@ span[data-baseweb="tag"] {
 }
 span[data-baseweb="tag"] span { color: #ffffff !important; }
 span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
-/* multiselect container — match filter bar tone */
 [data-baseweb="select"] > div {
     background: rgba(58,111,143,0.75) !important;
     border: 1px solid #7ab3d0 !important;
@@ -49,7 +46,6 @@ span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
     border-color: #d0eeff !important;
     box-shadow: 0 0 0 2px rgba(200,230,255,0.3) !important;
 }
-/* dropdown menu */
 [data-baseweb="popover"] ul { background: #3a6f8f !important; border: 1px solid #7ab3d0 !important; }
 [data-baseweb="popover"] li { color: #e8f4ff !important; }
 [data-baseweb="popover"] li:hover { background: #2d6080 !important; color: #fff !important; }
@@ -68,12 +64,6 @@ span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
 .filter-title {
     font-size: 0.68rem; font-weight: 700; color: #63b3ed;
     text-transform: uppercase; letter-spacing: 0.13em; margin-bottom: 8px;
-}
-.pending-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(237,137,54,0.15); border: 1px solid #ed8936;
-    border-radius: 16px; padding: 3px 10px;
-    font-size: 0.74rem; color: #fbd38d; margin-left: 8px; vertical-align: middle;
 }
 .active-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:2px; }
 .pill {
@@ -107,7 +97,6 @@ span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Sentinel + JS: true fixed-position filter ─────────────────────────────────
 st.markdown('<span id="filter-sentinel"></span>', unsafe_allow_html=True)
 
 import streamlit.components.v1 as _stc
@@ -115,12 +104,10 @@ _stc.html("""
 <script>
 (function () {
   var DONE = false;
-
   function fixFilter() {
     if (DONE) return;
     var sentinel = document.getElementById('filter-sentinel');
     if (!sentinel) return;
-
     var block = sentinel;
     var found = false;
     for (var i = 0; i < 12; i++) {
@@ -131,23 +118,18 @@ _stc.html("""
       }
     }
     if (!found) return;
-
     if (block.getAttribute('data-filter-fixed') === '1') return;
     block.setAttribute('data-filter-fixed', '1');
     DONE = true;
-
     var spacer = document.createElement('div');
     spacer.id = 'filter-spacer';
     block.parentNode.insertBefore(spacer, block);
-
     function applyFixed() {
       var h = block.scrollHeight;
       spacer.style.height = h + 'px';
-
       var parentRect = block.parentElement.getBoundingClientRect();
       block.style.cssText = [
-        'position:fixed',
-        'top:0',
+        'position:fixed','top:0',
         'left:' + parentRect.left + 'px',
         'width:' + parentRect.width + 'px',
         'z-index:9999',
@@ -156,11 +138,9 @@ _stc.html("""
         '-webkit-backdrop-filter:blur(8px)',
       ].join(';');
     }
-
     applyFixed();
     window.addEventListener('resize', applyFixed);
   }
-
   fixFilter();
   new MutationObserver(function(muts) {
     muts.forEach(function(m) { if (m.addedNodes.length) fixFilter(); });
@@ -221,39 +201,20 @@ segment_opts  = sorted(df['Segment'].unique().tolist())
 year_opts     = sorted(df['Year'].unique().tolist())
 
 fc1, fc2, fc3, fc4 = st.columns(4)
-
 with fc1:
-    sel_region = st.multiselect(
-        "Region", region_opts,
-        default=[v for v in st.session_state.sel_region if v in region_opts],
-        placeholder="All regions", key='_w_region'
-    )
+    sel_region = st.multiselect("Region", region_opts, default=[v for v in st.session_state.sel_region if v in region_opts], placeholder="All regions", key='_w_region')
 with fc2:
-    sel_category = st.multiselect(
-        "Category", category_opts,
-        default=[v for v in st.session_state.sel_category if v in category_opts],
-        placeholder="All categories", key='_w_category'
-    )
+    sel_category = st.multiselect("Category", category_opts, default=[v for v in st.session_state.sel_category if v in category_opts], placeholder="All categories", key='_w_category')
 with fc3:
-    sel_segment = st.multiselect(
-        "Segment", segment_opts,
-        default=[v for v in st.session_state.sel_segment if v in segment_opts],
-        placeholder="All segments", key='_w_segment'
-    )
+    sel_segment = st.multiselect("Segment", segment_opts, default=[v for v in st.session_state.sel_segment if v in segment_opts], placeholder="All segments", key='_w_segment')
 with fc4:
-    sel_year = st.multiselect(
-        "Year", year_opts,
-        default=[v for v in st.session_state.sel_year if v in year_opts],
-        placeholder="All years", key='_w_year'
-    )
+    sel_year = st.multiselect("Year", year_opts, default=[v for v in st.session_state.sel_year if v in year_opts], placeholder="All years", key='_w_year')
 
-# Sync session state immediately
 st.session_state.sel_region   = list(sel_region)
 st.session_state.sel_category = list(sel_category)
 st.session_state.sel_segment  = list(sel_segment)
 st.session_state.sel_year     = list(sel_year)
 
-# Active filter pills
 pills_html = '<div class="active-pills">'
 cs = st.session_state.clicked_state
 for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
@@ -265,10 +226,8 @@ if not sel_region and not sel_category and not sel_segment and not sel_year and 
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
-
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ── MAP CLICK handler ────────────────────────────────────────────────────────
 if st.session_state.clicked_state:
     col_badge, col_clear = st.columns([5, 1])
     with col_badge:
@@ -314,7 +273,6 @@ top_region_row= region_sales.sort_values('Sales', ascending=False).iloc[0]
 top_seg_row   = segment_sales.sort_values('Sales', ascending=False).iloc[0]
 state_share   = (top_state['Sales'] / total_sales * 100) if total_sales else 0
 
-# ── KPI ───────────────────────────────────────────────────────────────────────
 k1,k2,k3,k4 = st.columns(4)
 k1.metric("💰 Total Sales",     f"${total_sales:,.0f}")
 k2.metric("📦 Total Orders",    f"{total_orders:,}")
@@ -323,20 +281,13 @@ k4.metric("🏆 #1 Region",       top_region_row['Region'])
 
 st.markdown("---")
 
-# ── MAP without Search Box ───────────────────────────────────────────────────────
+# ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
-# Calculate all state sales first
 all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
 
-# Quick state filters as pills
 if not st.session_state.clicked_state:
-    st.markdown("""
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px; align-items:center;">
-        <span style="color:#90cdf4; font-size:0.8rem;">⚡ Quick select:</span>
-    """, unsafe_allow_html=True)
-    
-    # Show top 5 states as quick filters
+    st.markdown("""<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px; align-items:center;"><span style="color:#90cdf4; font-size:0.8rem;">⚡ Quick select:</span>""", unsafe_allow_html=True)
     top_states_quick = all_state_sales.nlargest(5, 'Sales')['State'].tolist()
     quick_cols = st.columns(len(top_states_quick))
     for i, state in enumerate(top_states_quick):
@@ -344,17 +295,13 @@ if not st.session_state.clicked_state:
             if st.button(f"🏆 {state}", key=f"quick_{state}", use_container_width=True):
                 st.session_state.clicked_state = state
                 st.rerun()
-    
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Show selected state info if any
 if st.session_state.clicked_state:
     col_info, col_clear_map = st.columns([5, 1])
     with col_info:
-        # Get sales for selected state
         state_sales_val = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
         sales_text = f"${state_sales_val[0]:,.0f}" if len(state_sales_val) > 0 else "N/A"
-        
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:10px; padding:8px 15px; margin-bottom:15px;">
             <div style="display:flex; align-items:center; gap:8px;">
@@ -364,15 +311,11 @@ if st.session_state.clicked_state:
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
     with col_clear_map:
-        st.markdown("<div style='margin-top:0;'>", unsafe_allow_html=True)
         if st.button("✕ Clear", key="clear_state_btn", use_container_width=True):
             st.session_state.clicked_state = None
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
-# Create the map
 fig_map = px.choropleth(
     all_state_sales, locations='State Code', locationmode="USA-states",
     color='Sales', scope="usa", hover_name='State',
@@ -414,8 +357,7 @@ st.markdown(f"""
   <div class="label">Map Insight</div>
   <div class="value">{top_state['State']} leads all states</div>
   <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
-  <strong>{state_share:.1f}%</strong> of total revenue in this selection.
-  Focus distribution and logistics investments here for maximum impact.</div>
+  <strong>{state_share:.1f}%</strong> of total revenue in this selection.</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -452,36 +394,24 @@ with col1:
 with col2:
     st.subheader("Category & Segment Mix")
     _sun_df = filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index()
-    # Assign explicit colors: segments get blues, parent category ring gets steel tones
     _sun_cmap = {
-        # outer ring — segments (consistent across all charts)
         "Consumer":        "#1a56a0",
         "Corporate":       "#4299e1",
         "Home Office":     "#90cdf4",
-        # inner ring — categories (darker steel so inner ring reads as structure)
         "Furniture":       "#1a365d",
         "Office Supplies": "#1e4a6e",
         "Technology":      "#17364f",
-        # root node (center)
         "(?)":             "#0d1b2a",
     }
     fig_sun = px.sunburst(
         _sun_df, path=['Category','Segment'], values='Sales',
-        color='Segment',
-        color_discrete_map=_sun_cmap
+        color='Segment', color_discrete_map=_sun_cmap
     )
-    # Override the inner category ring colours via marker patches
     fig_sun.update_traces(
         hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
         textfont=dict(size=11),
         insidetextorientation='radial',
-        # Darken parent (category) sectors manually
-        marker=dict(
-            colors=[
-                _sun_cmap.get(lbl, "#1e3a5f")
-                for lbl in fig_sun.data[0].labels
-            ]
-        )
+        marker=dict(colors=[_sun_cmap.get(lbl, "#1e3a5f") for lbl in fig_sun.data[0].labels])
     )
     fig_sun.update_layout(showlegend=True, legend=dict(
         orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5,
@@ -534,7 +464,6 @@ with ab_c2:
     opts_b = sorted(filtered_df[_ab_dims[dim_b]].unique().tolist())
     val_b  = st.selectbox("Value", opts_b, key="ab_val_b", index=min(1, len(opts_b)-1))
 
-# Slice the two groups
 grp_a = filtered_df[filtered_df[_ab_dims[dim_a]] == val_a]
 grp_b = filtered_df[filtered_df[_ab_dims[dim_b]] == val_b]
 
@@ -550,7 +479,6 @@ def _ab_stats(grp):
 
 sa, sb = _ab_stats(grp_a), _ab_stats(grp_b)
 
-# ── KPI comparison row ────────────────────────────────────────────────────────
 k1, k2, k3 = st.columns(3)
 
 def _delta(a, b):
@@ -611,131 +539,60 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (COMPLETELY CUSTOM HOVER - NO CATEGORY NAMES) ─────
-# Calculate both sales and order counts for each category
-ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
-ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
+# ── Category breakdown A vs B ─────────────────────────────────────────────────
+# Build dataframes with order counts
+ab_cat_a = grp_a.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_a)
+ab_cat_b = grp_b.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_b)
+ab_cat   = pd.concat([ab_cat_a, ab_cat_b], ignore_index=True)
 
-# Add order count data
-ab_cat_a_orders = grp_a.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
-ab_cat_b_orders = grp_b.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
+group_a_color = "#4299e1"
+group_b_color = "#e94560"
 
-# Merge sales and order data
-ab_cat_a = ab_cat_a_sales.merge(ab_cat_a_orders, on="Category", how="left")
-ab_cat_b = ab_cat_b_sales.merge(ab_cat_b_orders, on="Category", how="left")
-
-# Fill any missing order counts with 0
-ab_cat_a["Order Count"] = ab_cat_a["Order Count"].fillna(0).astype(int)
-ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
-
-# Combine for plotting
-ab_cat = pd.concat([ab_cat_a, ab_cat_b])
-
-# Use the SAME colors for bars and backgrounds
-# These match the screenshot colors
-group_a_color = "#4299e1"  # Blue for Central
-group_b_color = "#e94560"   # Red for Corporate
-
+# ── FIX: use custom_data + for_each_trace to inject group name per trace ──────
 fig_cat_ab = px.bar(
-    ab_cat, 
-    x="Category", 
-    y="Sales", 
-    color="Group", 
+    ab_cat,
+    x="Category",
+    y="Sales",
+    color="Group",
     barmode="group",
     color_discrete_map={val_a: group_a_color, val_b: group_b_color},
     labels={"Sales": "Total Sales ($)", "Group": ""},
+    custom_data=["Order Count", "Group"],
 )
 
-# Disable default hover and use custom hover
-fig_cat_ab.update_traces(
-    hoverinfo="none",
-    hovertemplate=None,
-    selector={"name": val_a}
+# Inject correct group name directly into each trace's hovertemplate
+fig_cat_ab.for_each_trace(
+    lambda t: t.update(
+        hovertemplate=(
+            f"<b>{t.name}</b><br>"
+            "<b>%{x}</b><br>"
+            "Sales: $%{y:,.0f}<br>"
+            "Orders: %{customdata[0]:,}"
+            "<extra></extra>"
+        )
+    )
 )
-
-fig_cat_ab.update_traces(
-    hoverinfo="none",
-    hovertemplate=None,
-    selector={"name": val_b}
-)
-
-# Add custom hover data using scatter traces (invisible points)
-for category in ab_cat_a['Category'].unique():
-    a_data = ab_cat_a[ab_cat_a['Category'] == category]
-    b_data = ab_cat_b[ab_cat_b['Category'] == category]
-    
-    if not a_data.empty:
-        a_sales = a_data['Sales'].values[0]
-        a_orders = a_data['Order Count'].values[0]
-        
-        fig_cat_ab.add_trace(go.Scatter(
-            x=[category],
-            y=[a_sales],
-            mode='markers',
-            marker=dict(size=20, opacity=0),
-            hoverinfo='text',
-            hovertext=f"<span style='color:{group_a_color}'>🔵 {val_a}</span><br>Sales: ${a_sales:,.0f}<br>Orders: {a_orders}",
-            showlegend=False,
-            hoverlabel=dict(
-                bgcolor="#1e3a5f",
-                font_size=12,
-                font_color="white",
-                bordercolor=group_a_color
-            )
-        ))
-    
-    if not b_data.empty:
-        b_sales = b_data['Sales'].values[0]
-        b_orders = b_data['Order Count'].values[0]
-        
-        fig_cat_ab.add_trace(go.Scatter(
-            x=[category],
-            y=[b_sales],
-            mode='markers',
-            marker=dict(size=20, opacity=0),
-            hoverinfo='text',
-            hovertext=f"<span style='color:{group_b_color}'>🔴 {val_b}</span><br>Sales: ${b_sales:,.0f}<br>Orders: {b_orders}",
-            showlegend=False,
-            hoverlabel=dict(
-                bgcolor="#1e3a5f",
-                font_size=12,
-                font_color="white",
-                bordercolor=group_b_color
-            )
-        ))
 
 fig_cat_ab.update_layout(
-    title=dict(
-        text="Category Breakdown — A vs B", 
-        font=dict(size=13, color="white"),
-        x=0.5
-    ),
-    # Hide default legend
+    title=dict(text="Category Breakdown — A vs B", font=dict(size=13, color="white"), x=0.5),
     showlegend=False,
-    plot_bgcolor="rgba(0,0,0,0)", 
+    plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
     yaxis=dict(
-        tickprefix="$", 
-        tickformat=",.0f",
+        tickprefix="$", tickformat=",.0f",
         gridcolor='rgba(128,128,128,0.2)',
         title=dict(text="Sales ($)", font=dict(color="white")),
         tickfont=dict(color="white")
     ),
-    xaxis=dict(
-        title="",
-        showticklabels=False,
-        showgrid=False,
-        zeroline=False,
-        showline=False
-    ),
+    xaxis=dict(title="", showticklabels=False, showgrid=False, zeroline=False, showline=False),
     margin=dict(l=10, r=10, t=40, b=30),
     height=350,
-    hovermode="x",
+    hovermode="closest",
 )
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Add custom legend with colored backgrounds that MATCH THE BAR COLORS
+# Group legend pills
 st.markdown(f"""
 <div style="display:flex; justify-content:center; gap:20px; margin-bottom:15px;">
     <div style="display:flex; align-items:center; gap:8px; background:{group_a_color}; padding:5px 15px; border-radius:20px; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
@@ -747,77 +604,38 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Add custom category labels with colored backgrounds
+# Category label pills
 categories = sorted(filtered_df['Category'].unique())
-category_colors = {
-    'Furniture': '#48bb78',  # Green
-    'Office Supplies': '#f39c12',  # Orange
-    'Technology': '#9b59b6'  # Purple
-}
-
+category_colors = {'Furniture': '#48bb78', 'Office Supplies': '#f39c12', 'Technology': '#9b59b6'}
 cols = st.columns(len(categories))
 for i, cat in enumerate(categories):
     color = category_colors.get(cat, '#4299e1')
     icon = '📦' if cat == 'Furniture' else '📎' if cat == 'Office Supplies' else '💻'
-    
     with cols[i]:
         st.markdown(f"""
-        <div style="
-            background: {color};
-            border-radius: 20px;
-            padding: 6px 0;
-            text-align: center;
-            margin-top: -15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        ">
-            <span style="color: white; font-weight: 600; font-size: 0.85rem;">
-                {icon} {cat}
-            </span>
+        <div style="background:{color};border-radius:20px;padding:6px 0;text-align:center;margin-top:-15px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+            <span style="color:white;font-weight:600;font-size:0.85rem;">{icon} {cat}</span>
         </div>
         """, unsafe_allow_html=True)
 
-# Add order count summary cards
+# Order count summary cards
 col1, col2, col3 = st.columns(3)
-
-with col1:
-    furniture_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_a['Category'].values else 0
-    furniture_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_b['Category'].values else 0
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">📦 Furniture Orders</div>
-        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{furniture_orders_a}</span></div>
-            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{furniture_orders_b}</span></div>
+for col, cat_name, icon in [(col1,'Furniture','📦'), (col2,'Office Supplies','📎'), (col3,'Technology','💻')]:
+    a_row = ab_cat_a[ab_cat_a['Category'] == cat_name]
+    b_row = ab_cat_b[ab_cat_b['Category'] == cat_name]
+    a_orders = int(a_row['Order Count'].values[0]) if not a_row.empty else 0
+    b_orders = int(b_row['Order Count'].values[0]) if not b_row.empty else 0
+    with col:
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b);border:1px solid #2d4a6b;border-radius:10px;padding:12px;text-align:center;">
+            <div style="color:#63b3ed;font-size:0.75rem;text-transform:uppercase;margin-bottom:5px;">{icon} {cat_name} Orders</div>
+            <div style="display:flex;justify-content:center;gap:25px;margin-top:5px;">
+                <div><span style="color:{group_a_color};font-weight:600;">🔵</span> <span style="color:white;">{a_orders}</span></div>
+                <div><span style="color:{group_b_color};font-weight:600;">🔴</span> <span style="color:white;">{b_orders}</span></div>
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-with col2:
-    office_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_a['Category'].values else 0
-    office_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_b['Category'].values else 0
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">📎 Office Supplies Orders</div>
-        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{office_orders_a}</span></div>
-            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{office_orders_b}</span></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    tech_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_a['Category'].values else 0
-    tech_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_b['Category'].values else 0
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">💻 Technology Orders</div>
-        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{tech_orders_a}</span></div>
-            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{tech_orders_b}</span></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
 winner_tot = max(sa["total"], sb["total"])
@@ -882,7 +700,7 @@ with col4:
     st.plotly_chart(fig_subcat, use_container_width=True, key="bar_subcat")
 
     bottom_subcat = subcat_sorted.iloc[-1]
-    st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement or consider deprioritizing stock.</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement.</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -891,16 +709,20 @@ st.header("🌎 Region vs. Segment Matrix")
 fig_grouped = px.bar(region_seg, x='Region', y='Sales', color='Segment',
                      barmode='group', color_discrete_sequence=px.colors.qualitative.Set2,
                      labels={'Sales':'Total Sales ($)'})
-fig_grouped.update_traces(hovertemplate="<b>%{x}</b><br>Segment: %{fullData.name}<br>Sales: $%{y:,.0f}<extra></extra>")
+fig_grouped.for_each_trace(
+    lambda t: t.update(
+        hovertemplate=f"<b>%{{x}}</b><br>Segment: {t.name}<br>Sales: $%{{y:,.0f}}<extra></extra>"
+    )
+)
 st.plotly_chart(fig_grouped, use_container_width=True, key="grouped_region_seg")
 
 best_rs  = region_seg.sort_values('Sales', ascending=False).iloc[0]
 worst_rs = region_seg.sort_values('Sales').iloc[0]
-st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest performer: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}) — a clear opportunity for targeted growth campaigns.</div></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}).</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ── CITIES TABLE with STATE column ────────────────────────────────────────────
+# ── CITIES TABLE ──────────────────────────────────────────────────────────────
 st.header("🏙️ Top Cities by Sales")
 
 _city_mask = pd.Series([True] * len(df), index=df.index)
@@ -910,7 +732,6 @@ if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
 _city_base = df[_city_mask]
 
-# Updated aggregation to include State
 _agg = _city_base.groupby(['City', 'State']).agg(
     **{
         'Total Sales': ('Sales',       'sum'),
@@ -921,8 +742,6 @@ _agg = _city_base.groupby(['City', 'State']).agg(
 _agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
 _agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
 _agg.index += 1
-
-# Reorder columns to show State after City
 _agg = _agg[['State', 'City', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
 
 st.dataframe(
@@ -935,13 +754,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
-
-
-
-
-
-
-
-
-
