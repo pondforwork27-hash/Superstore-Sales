@@ -297,59 +297,70 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
-_css_parts = ["<style>"]
-for _, _r in _all_region_stats.iterrows():
-    _reg = _r['Region']
-    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _act  = _reg in st.session_state.sel_region_card
-    _bw   = '3px' if _act else '1.5px'
-    _op   = '1.0' if _act else '0.68'
-    _glow = f'box-shadow:0 0 26px {_border}bb,0 4px 16px rgba(0,0,0,0.5) !important;' if _act else 'box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;'
-    _slug = _reg.lower().replace(' ', '-')
-    _css_parts.append(f"""
-.rcard-{_slug} > div > div > button {{
-    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
-    border: {_bw} solid {_border} !important;
-    border-radius: 20px !important;
-    color: {_accent} !important;
-    min-height: 220px !important;
-    height: auto !important;
+# ── Region card CSS: overlay transparent button on top of HTML card ──────
+st.markdown("""<style>
+.rcard-wrap { position: relative; margin-bottom: 8px; }
+.rcard-wrap button {
+    position: absolute !important;
+    inset: 0 !important;
     width: 100% !important;
-    padding: 32px 20px 28px !important;
-    font-size: 1.1rem !important;
-    white-space: pre-line !important;
-    line-height: 2.3 !important;
-    opacity: {_op} !important;
-    {_glow}
-    transition: all 0.2s ease !important;
+    height: 100% !important;
+    opacity: 0 !important;
     cursor: pointer !important;
-    text-align: center !important;
-}}
-.rcard-{_slug} > div > div > button:hover {{
-    opacity: 1.0 !important;
-    transform: translateY(-4px) scale(1.02) !important;
-    box-shadow: 0 0 22px {_border}aa, 0 8px 20px rgba(0,0,0,0.4) !important;
-    border-color: {_accent} !important;
-}}""")
-_css_parts.append("</style>")
-st.markdown("".join(_css_parts), unsafe_allow_html=True)
+    z-index: 10 !important;
+    border-radius: 20px !important;
+}
+</style>""", unsafe_allow_html=True)
 
 # ── Render cards ──────────────────────────────────────────────────────────
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
-    _region   = _row['Region']
-    _sales    = _row['Sales']
-    _orders   = int(_row['Orders'])
-    _share    = _sales / _grand_total * 100 if _grand_total else 0
-    _icon     = _region_meta[_region][0]
-    _is_act   = _region in st.session_state.sel_region_card
-    _check    = "  ✓" if _is_act else ""
-    _slug     = _region.lower().replace(' ', '-')
-    _label    = f"{_icon}\n{_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders  ·  {_share:.1f}%"
+    _region  = _row['Region']
+    _sales   = _row['Sales']
+    _orders  = int(_row['Orders'])
+    _share   = _sales / _grand_total * 100 if _grand_total else 0
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_region, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _is_act  = _region in st.session_state.sel_region_card
+    _bw      = '3px' if _is_act else '1.5px'
+    _op      = '1.0' if _is_act else '0.72'
+    _glow    = f'box-shadow:0 0 32px {_border}cc,0 6px 20px rgba(0,0,0,0.6);' if _is_act else 'box-shadow:0 4px 14px rgba(0,0,0,0.4);'
+    _badge   = f'<div style="position:absolute;top:12px;right:14px;background:{_border};color:#fff;font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;letter-spacing:.06em;">ACTIVE</div>' if _is_act else ''
+    _trans   = 'translateY(-5px) scale(1.02)' if _is_act else 'none'
 
     with _rc_cols[_idx]:
-        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
-        if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
+        # HTML card (visual layer)
+        st.markdown(f'''
+        <div class="rcard-wrap" id="rcard-{_region.lower().replace(" ","-")}">
+          <div style="
+            position:relative;
+            background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);
+            border:{_bw} solid {_border};
+            border-radius:20px;
+            padding:32px 20px 28px;
+            text-align:center;
+            opacity:{_op};
+            {_glow}
+            transform:{_trans};
+            transition:all 0.2s ease;
+            cursor:pointer;
+            min-height:200px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+          ">
+            {_badge}
+            <div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>
+            <div style="font-size:1rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{"✓ " if _is_act else ""}{_region}</div>
+            <div style="font-size:1.4rem;font-weight:800;color:#fff;margin:4px 0;">${_sales:,.0f}</div>
+            <div style="font-size:0.8rem;color:#a0aec0;">{_orders:,} orders</div>
+            <div style="font-size:0.85rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>
+          </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        # Invisible button on top (clickable layer)
+        if st.button(" ", key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
                 _cards.remove(_region)
@@ -357,7 +368,6 @@ for _idx, _row in _all_region_stats.iterrows():
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
