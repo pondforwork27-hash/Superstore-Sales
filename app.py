@@ -272,7 +272,12 @@ def load_data():
     df['Quarter'] = df['Order Date'].dt.to_period('Q').astype(str)
     df['Month_Name'] = df['Order Date'].dt.strftime('%b %Y')
     
-
+    # Add derived metrics (safely check for columns)
+    df['Order_Value'] = df['Sales'] / df['Quantity']
+    
+    # Only add profit-related columns if they exist
+    if 'Profit' in df.columns:
+        df['Profit_Margin'] = (df['Profit'] / df['Sales'] * 100).round(2)
     
     return df
 
@@ -280,6 +285,9 @@ try:
     df = load_data()
 except FileNotFoundError:
     st.error("⚠️ Data file not found. Please ensure 'cleaned_train.csv' is in the current directory.")
+    st.stop()
+except Exception as e:
+    st.error(f"⚠️ Error loading data: {str(e)}")
     st.stop()
 
 # ── Session state initialization ──────────────────────────────────────────────
@@ -401,24 +409,30 @@ st.markdown("### 📊 Key Performance Indicators")
 total_sales = filtered_df['Sales'].sum()
 total_orders = filtered_df['Order ID'].nunique()
 avg_order_value = total_sales / total_orders if total_orders else 0
-total_profit = filtered_df['Profit'].sum()
-avg_margin = (filtered_df['Profit'].sum() / filtered_df['Sales'].sum() * 100) if total_sales > 0 else 0
+total_quantity = filtered_df['Quantity'].sum()
+avg_items_per_order = filtered_df['Quantity'].mean()
 
-# YoY comparison (if applicable)
-current_year = filtered_df['Year'].max()
-prev_year_sales = filtered_df[filtered_df['Year'] == current_year - 1]['Sales'].sum()
-yoy_growth = ((total_sales - prev_year_sales) / prev_year_sales * 100) if prev_year_sales > 0 else 0
+# Calculate growth if we have multiple years
+years = filtered_df['Year'].unique()
+if len(years) > 1:
+    current_year = max(years)
+    prev_year_sales = filtered_df[filtered_df['Year'] == current_year - 1]['Sales'].sum()
+    yoy_growth = ((total_sales - prev_year_sales) / prev_year_sales * 100) if prev_year_sales > 0 else 0
+    growth_text = f"{yoy_growth:+.1f}% vs last year"
+else:
+    growth_text = "Single year view"
 
 cols = st.columns(4)
 metrics = [
-    (f"${total_sales:,.0f}", "Total Sales", f"{yoy_growth:+.1f}% vs last year", "💰"),
-    (f"{total_orders:,}", "Total Orders", f"{len(filtered_df):,} items", "📦"),
-    (f"${avg_order_value:,.0f}", "Avg Order Value", f"{filtered_df['Quantity'].mean():.1f} items/order", "🧾"),
-    (f"${total_profit:,.0f}", "Total Profit", f"{avg_margin:.1f}% margin", "💎")
+    (f"${total_sales:,.0f}", "Total Sales", growth_text, "💰"),
+    (f"{total_orders:,}", "Total Orders", f"{total_quantity:,} items", "📦"),
+    (f"${avg_order_value:,.0f}", "Avg Order Value", f"{avg_items_per_order:.1f} items/order", "🧾"),
+    (f"{len(filtered_df['City'].unique()):,}", "Cities", f"{len(filtered_df['State'].unique())} states", "🏙️")
 ]
 
 for col, (value, label, trend, icon) in zip(cols, metrics):
     with col:
+        trend_color = '#48bb78' if '+' in trend else '#e94560' if '-' in trend else '#a0aec0'
         st.markdown(f"""
         <div class="metric-card">
             <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -427,7 +441,7 @@ for col, (value, label, trend, icon) in zip(cols, metrics):
             </div>
             <div class="metric-value">{value}</div>
             <div class="metric-trend">
-                <span style="color: {'#48bb78' if '+' in trend else '#e94560' if '-' in trend else '#a0aec0'}">
+                <span style="color: {trend_color}">
                     {trend}
                 </span>
             </div>
@@ -701,7 +715,7 @@ with tab3:
             color_continuous_scale='Blues'
         )
         fig_quarter.update_traces(
-            hovertemplate='<b>Q%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>'
+            hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>'
         )
         fig_quarter.update_layout(
             xaxis=dict(title=''),
@@ -721,13 +735,11 @@ st.subheader("🏙️ City Performance")
 city_stats = filtered_df.groupby('City').agg({
     'Sales': 'sum',
     'Order ID': 'nunique',
-    'Profit': 'sum',
     'Quantity': 'sum'
 }).reset_index()
 
-city_stats.columns = ['City', 'Total Sales', 'Order Count', 'Total Profit', 'Units Sold']
+city_stats.columns = ['City', 'Total Sales', 'Order Count', 'Units Sold']
 city_stats['Avg Order Value'] = city_stats['Total Sales'] / city_stats['Order Count']
-city_stats['Profit Margin'] = (city_stats['Total Profit'] / city_stats['Total Sales'] * 100).round(1)
 
 # Sort and format
 city_stats = city_stats.nlargest(20, 'Total Sales').reset_index(drop=True)
@@ -736,9 +748,7 @@ city_stats.index = range(1, len(city_stats) + 1)
 # Format columns
 display_df = city_stats.copy()
 display_df['Total Sales'] = display_df['Total Sales'].apply('${:,.0f}'.format)
-display_df['Total Profit'] = display_df['Total Profit'].apply('${:,.0f}'.format)
 display_df['Avg Order Value'] = display_df['Avg Order Value'].apply('${:,.0f}'.format)
-display_df['Profit Margin'] = display_df['Profit Margin'].apply('{:.1f}%'.format)
 
 # Add export button
 col1, col2 = st.columns([3, 1])
@@ -746,7 +756,7 @@ with col2:
     if st.button("📥 Export to CSV", use_container_width=True):
         csv = city_stats.to_csv(index=False)
         st.download_button(
-            label="Download",
+            label="Download CSV",
             data=csv,
             file_name=f"city_sales_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv"
@@ -761,10 +771,8 @@ st.dataframe(
         "City": st.column_config.TextColumn("City", width="medium"),
         "Total Sales": st.column_config.TextColumn("Total Sales", width="small"),
         "Order Count": st.column_config.NumberColumn("Orders", width="small", format="%d"),
-        "Total Profit": st.column_config.TextColumn("Profit", width="small"),
         "Units Sold": st.column_config.NumberColumn("Units", width="small", format="%d"),
-        "Avg Order Value": st.column_config.TextColumn("Avg Order", width="small"),
-        "Profit Margin": st.column_config.TextColumn("Margin", width="small")
+        "Avg Order Value": st.column_config.TextColumn("Avg Order", width="small")
     }
 )
 
@@ -775,4 +783,3 @@ st.markdown("""
     🗺️ Regional Sales Intelligence Dashboard • Built with Streamlit • Data updates in real-time
 </div>
 """, unsafe_allow_html=True)
-
