@@ -26,7 +26,12 @@ st.markdown("""
 /* ── Filter label and input text colors ── */
 .filter-bar label { color: #90cdf4 !important; font-size: 0.75rem !important; font-weight: 600 !important; }
 .filter-bar [data-baseweb="select"] input { color: #e2e8f0 !important; }
-.filter-bar [data-baseweb="select"] input::placeholder { color: #4a7fa5 !important; }
+.filter-bar [data-baseweb="select"] input::placeholder { color: #90cdf4 !important; opacity: 1 !important; }
+/* BaseWeb placeholder rendered as inner div, not ::placeholder */
+.filter-bar [data-baseweb="select"] [class$="placeholder"],
+.filter-bar [data-baseweb="select"] [class*="placeholder"] { color: #90cdf4 !important; opacity: 1 !important; }
+/* Streamlit multiselect empty state text */
+[data-testid="stMultiSelect"] [class*="placeholder"] { color: #90cdf4 !important; opacity: 1 !important; }
 /* ── Multiselect selected tags — match map theme ── */
 span[data-baseweb="tag"] {
     background: linear-gradient(135deg, #1e3a5f, #2d5a8a) !important;
