@@ -297,36 +297,36 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
-# ── Region card CSS: use :has() to overlay button over sibling card ───────
+# ── Region card CSS ────────────────────────────────────────────────────────
+# Strategy: render button FIRST (tall + transparent), then card with
+# negative margin-top to slide visually into the button area.
+# Clicks land on the button (z-index higher, rendered first).
 st.markdown("""<style>
-/* Make the column vertical block position:relative when it contains a card */
-[data-testid="stVerticalBlock"]:has(.rcard-wrap) {
-    position: relative !important;
-}
-/* Position the stButton container absolutely to cover the whole column */
-[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="stButton"],
-[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="stBaseButton-secondaryFormSubmit"],
-[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="element-container"] {
-    position: absolute !important;
-    inset: 0 !important;
+.rcard-btn button {
+    height: 220px !important;
+    min-height: 220px !important;
     width: 100% !important;
-    height: 100% !important;
-    z-index: 100 !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: transparent !important;
+    border: none !important;
     margin: 0 !important;
     padding: 0 !important;
 }
-/* Make the actual button element fill the overlay */
-[data-testid="stVerticalBlock"]:has(.rcard-wrap) button {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    opacity: 0 !important;
-    cursor: pointer !important;
-    z-index: 100 !important;
-    border-radius: 20px !important;
-    background: transparent !important;
-    border: none !important;
+.rcard-btn [data-testid="stButton"],
+.rcard-btn [data-testid="element-container"] {
+    height: 220px !important;
+    min-height: 220px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.rcard-visual {
+    margin-top: -224px !important;
+    position: relative !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -342,33 +342,33 @@ for _idx, _row in _all_region_stats.iterrows():
     _bw      = '3px' if _is_act else '1.5px'
     _op      = '1.0' if _is_act else '0.72'
     _glow    = f'box-shadow:0 0 32px {_border}cc,0 6px 20px rgba(0,0,0,0.6);' if _is_act else 'box-shadow:0 4px 14px rgba(0,0,0,0.4);'
-    _badge   = f'<div style="position:absolute;top:12px;right:14px;background:{_border};color:#fff;font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;letter-spacing:.06em;">ACTIVE</div>' if _is_act else ''
-    _trans   = 'translateY(-5px) scale(1.02)' if _is_act else 'none'
+    _check   = "✓ " + _region if _is_act else _region
+    _badge   = (
+        f'<div style="position:absolute;top:12px;right:14px;background:{_border};color:#fff;'
+        f'font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;">ACTIVE</div>'
+    ) if _is_act else ''
+    _card_style = (
+        f'position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);'
+        f'border:{_bw} solid {_border};border-radius:20px;padding:32px 20px 28px;'
+        f'text-align:center;opacity:{_op};{_glow}'
+        f'height:220px;display:flex;flex-direction:column;'
+        f'align-items:center;justify-content:center;gap:6px;'
+    )
+    _card_html = (
+        '<div class="rcard-visual">'
+        f'<div style="{_card_style}">'
+        + _badge +
+        f'<div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>'
+        f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check}</div>'
+        f'<div style="font-size:1.5rem;font-weight:800;color:#fff;margin:6px 0;">${_sales:,.0f}</div>'
+        f'<div style="font-size:0.82rem;color:#a0aec0;">{_orders:,} orders</div>'
+        f'<div style="font-size:0.88rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>'
+        '</div></div>'
+    )
 
     with _rc_cols[_idx]:
-        # Pre-compute to avoid nested quotes in f-string
-        _check_label = "✓ " + _region if _is_act else _region
-        _card_id     = _region.lower().replace(" ", "-")
-        _card_style  = (
-            f"position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);"
-            f"border:{_bw} solid {_border};border-radius:20px;padding:32px 20px 28px;"
-            f"text-align:center;opacity:{_op};{_glow}transform:{_trans};"
-            f"transition:all 0.2s ease;cursor:pointer;min-height:200px;"
-            f"display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"
-        )
-        _card_html = (
-            f'<div class="rcard-wrap" id="rcard-{_card_id}">' +
-            f'<div style="{_card_style}">' +
-            _badge +
-            f'<div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>' +
-            f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check_label}</div>' +
-            f'<div style="font-size:1.5rem;font-weight:800;color:#fff;margin:6px 0;">${_sales:,.0f}</div>' +
-            f'<div style="font-size:0.82rem;color:#a0aec0;">{_orders:,} orders</div>' +
-            f'<div style="font-size:0.88rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>' +
-            '</div></div>'
-        )
-        st.markdown(_card_html, unsafe_allow_html=True)
-        # Invisible button on top (clickable layer)
+        # 1️⃣ Button FIRST — tall + invisible, sits on top in z-order
+        st.markdown('<div class="rcard-btn">', unsafe_allow_html=True)
         if st.button(" ", key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
@@ -377,6 +377,9 @@ for _idx, _row in _all_region_stats.iterrows():
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        # 2️⃣ Card AFTER — negative margin pulls it up into button area
+        st.markdown(_card_html, unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
