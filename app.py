@@ -630,12 +630,6 @@ ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
 # Combine for plotting
 ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 
-# Create lookup dictionaries for hover data
-cat_a_sales_dict = ab_cat_a.set_index('Category')['Sales'].to_dict()
-cat_a_orders_dict = ab_cat_a.set_index('Category')['Order Count'].to_dict()
-cat_b_sales_dict = ab_cat_b.set_index('Category')['Sales'].to_dict()
-cat_b_orders_dict = ab_cat_b.set_index('Category')['Order Count'].to_dict()
-
 fig_cat_ab = px.bar(
     ab_cat, 
     x="Category", 
@@ -694,7 +688,7 @@ fig_cat_ab.update_layout(
     ),
     margin=dict(l=10, r=10, t=40, b=30), 
     height=350,
-    hovermode="x",  # Changed from 'x unified' to 'x' for better individual bar hovering
+    hovermode="x",  # Shows hover for individual bars
     hoverlabel=dict(
         bgcolor="#1e3a5f",
         font_size=12,
@@ -705,7 +699,7 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Add custom category labels below the chart
+# Add custom category labels below the chart (ONLY ONCE)
 categories = sorted(filtered_df['Category'].unique())
 category_icons = {
     'Furniture': '📦',
@@ -723,7 +717,7 @@ for cat in categories:
     '''
 labels_html += '</div>'
 
-st.markdown(labels_html, unsafe_allow_html=True)
+st.markdown(labels_html, unsafe_allow_html=True)  # ONLY ONE instance of this
 # Add custom category labels below the chart
 st.markdown(f"""
 <div style="display:flex; justify-content:space-around; margin-top:-15px; margin-bottom:10px; padding:0 20px;">
@@ -856,5 +850,6 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
