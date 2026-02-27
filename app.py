@@ -310,15 +310,15 @@ for _, _r in _all_region_stats.iterrows():
 .rcard-{_slug} > div > div > button {{
     background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
     border: {_bw} solid {_border} !important;
-    border-radius: 16px !important;
+    border-radius: 20px !important;
     color: {_accent} !important;
-    min-height: 130px !important;
+    min-height: 220px !important;
     height: auto !important;
     width: 100% !important;
-    padding: 18px 12px 14px !important;
-    font-size: 0.85rem !important;
+    padding: 32px 20px 28px !important;
+    font-size: 1.1rem !important;
     white-space: pre-line !important;
-    line-height: 1.8 !important;
+    line-height: 2.3 !important;
     opacity: {_op} !important;
     {_glow}
     transition: all 0.2s ease !important;
@@ -345,7 +345,7 @@ for _idx, _row in _all_region_stats.iterrows():
     _is_act   = _region in st.session_state.sel_region_card
     _check    = "  ✓" if _is_act else ""
     _slug     = _region.lower().replace(' ', '-')
-    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
+    _label    = f"{_icon}\n{_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders  ·  {_share:.1f}%"
 
     with _rc_cols[_idx]:
         st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
