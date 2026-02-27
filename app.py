@@ -108,9 +108,6 @@ span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
 """, unsafe_allow_html=True)
 
 # ── Sentinel + JS: true fixed-position filter ─────────────────────────────────
-# We mark the filter with an id, walk the Streamlit DOM tree to its containing
-# stVerticalBlock, set position:fixed + top:0, and insert an equal-height
-# spacer so the content underneath doesn't jump.
 st.markdown('<span id="filter-sentinel"></span>', unsafe_allow_html=True)
 
 import streamlit.components.v1 as _stc
@@ -124,25 +121,21 @@ _stc.html("""
     var sentinel = document.getElementById('filter-sentinel');
     if (!sentinel) return;
 
-    // Walk up the DOM to find the stVerticalBlock that wraps our filter widgets
     var block = sentinel;
     var found = false;
     for (var i = 0; i < 12; i++) {
       if (!block.parentElement) return;
       block = block.parentElement;
       if (block.getAttribute('data-testid') === 'stVerticalBlock') {
-        // Make sure this block actually contains the filter-bar div
         if (block.querySelector('.filter-bar')) { found = true; break; }
       }
     }
     if (!found) return;
 
-    // Prevent double-execution across re-renders
     if (block.getAttribute('data-filter-fixed') === '1') return;
     block.setAttribute('data-filter-fixed', '1');
     DONE = true;
 
-    // Insert spacer before the block so content doesn't jump up
     var spacer = document.createElement('div');
     spacer.id = 'filter-spacer';
     block.parentNode.insertBefore(spacer, block);
@@ -151,7 +144,6 @@ _stc.html("""
       var h = block.scrollHeight;
       spacer.style.height = h + 'px';
 
-      // Detect left offset from Streamlit's layout padding
       var parentRect = block.parentElement.getBoundingClientRect();
       block.style.cssText = [
         'position:fixed',
@@ -169,7 +161,6 @@ _stc.html("""
     window.addEventListener('resize', applyFixed);
   }
 
-  // Fire on load and on every Streamlit re-render (MutationObserver)
   fixFilter();
   new MutationObserver(function(muts) {
     muts.forEach(function(m) { if (m.addedNodes.length) fixFilter(); });
@@ -177,7 +168,6 @@ _stc.html("""
 })();
 </script>
 """, height=0)
-
 
 # ── State Mapping ─────────────────────────────────────────────────────────────
 us_state_to_abbrev = {
@@ -220,7 +210,7 @@ for k, v in defaults.items():
 
 # ── TITLE ─────────────────────────────────────────────────────────────────────
 st.title("🗺️ Regional Sales Intelligence")
-st.caption("Select filters to update all charts instantly. Click a state on the map to drill down.")
+st.caption("Select filters to update all charts instantly. Click a state on the map or use the search box to drill down.")
 
 # ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
 st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
@@ -257,7 +247,7 @@ with fc4:
         placeholder="All years", key='_w_year'
     )
 
-# Sync session state immediately (no Apply needed)
+# Sync session state immediately
 st.session_state.sel_region   = list(sel_region)
 st.session_state.sel_category = list(sel_category)
 st.session_state.sel_segment  = list(sel_segment)
@@ -276,9 +266,9 @@ if not sel_region and not sel_category and not sel_segment and not sel_year and 
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
 
-st.markdown('</div></div>', unsafe_allow_html=True)  # close filter-bar + sticky-filter-wrap
+st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ── MAP CLICK handler (state clear button appears below filter bar) ────────────
+# ── MAP CLICK handler ────────────────────────────────────────────────────────
 if st.session_state.clicked_state:
     col_badge, col_clear = st.columns([5, 1])
     with col_badge:
@@ -288,7 +278,7 @@ if st.session_state.clicked_state:
             st.session_state.clicked_state = None
             st.rerun()
 
-# ── BUILD filtered_df ───────────────────────────────────────────────────────────────
+# ── BUILD filtered_df ───────────────────────────────────────────────────────
 mask = pd.Series([True] * len(df), index=df.index)
 if sel_region:   mask &= df['Region'].isin(sel_region)
 if sel_category: mask &= df['Category'].isin(sel_category)
@@ -333,11 +323,12 @@ k4.metric("🏆 #1 Region",       top_region_row['Region'])
 
 st.markdown("---")
 
-# ── MAP with Enhanced Search Box ───────────────────────────────────────────────
+# ── MAP with Search Box ───────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down · 🔍 Search for a state")
 
-# Add search box above the map with custom styling
-col_search, col_info, col_clear = st.columns([3, 1, 1])
+# Add search box above the map
+col_search, col_info, col_clear_map = st.columns([3, 2, 1])
+
 with col_search:
     # Get all state names for search
     all_states = sorted(df['State'].unique())
@@ -374,12 +365,12 @@ with col_info:
         </div>
         """, unsafe_allow_html=True)
 
-with col_clear:
+with col_clear_map:
     if st.session_state.clicked_state:
         st.markdown("<div style='margin-top:23px;'>", unsafe_allow_html=True)
-        if st.button("✕ Clear State", key="clear_state_btn", use_container_width=True):
+        if st.button("✕ Clear", key="clear_state_btn", use_container_width=True):
             st.session_state.clicked_state = None
-            # Clear the search box by resetting the session state
+            # Clear the search box
             if 'state_search' in st.session_state:
                 del st.session_state.state_search
             st.rerun()
@@ -388,8 +379,8 @@ with col_clear:
 # Quick state filters as pills
 if not st.session_state.clicked_state:
     st.markdown("""
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px;">
-        <span style="color:#90cdf4; font-size:0.8rem; align-self:center;">Quick select:</span>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px; align-items:center;">
+        <span style="color:#90cdf4; font-size:0.8rem;">⚡ Quick select:</span>
     """, unsafe_allow_html=True)
     
     # Show top 5 states as quick filters
@@ -453,6 +444,8 @@ st.markdown(f"""
   Focus distribution and logistics investments here for maximum impact.</div>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("---")
 
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
@@ -644,7 +637,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED HOVER ISSUE) ──────────────────────────
+# ── Category breakdown side by side (FIXED - HIDE CATEGORY LABELS) ──────────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -662,18 +655,24 @@ ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
 
 fig_cat_ab = px.bar(
-    ab_cat, x="Category", y="Sales", color="Group", barmode="group",
+    ab_cat, 
+    x="Category", 
+    y="Sales", 
+    color="Group", 
+    barmode="group",
     color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
     labels={"Sales": "Total Sales ($)", "Group": ""},
-    custom_data=["Order Count", "Group"]  # Add custom data for hover
 )
 
-# Custom hover template that shows both sales and order count
+# Custom hover template that shows both groups
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{x}</b><br>" +
-                  "Group: %{customdata[1]}<br>" +
-                  "Sales: $%{y:,.0f}<br>" +
-                  "Orders: %{customdata[0]:,.0f}<br>" +
+    hovertemplate="<b>%{x}</b><br><br>" +
+                  f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
+                  "Sales: $" + f"{ab_cat_a.set_index('Category')['Sales'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_a.set_index('Category')['Order Count'].to_dict().get('%{{x}}', 0):,.0f}<br><br>" +
+                  f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
+                  "Sales: $" + f"{ab_cat_b.set_index('Category')['Sales'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_b.set_index('Category')['Order Count'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
                   "<extra></extra>"
 )
 
@@ -682,13 +681,18 @@ fig_cat_ab.update_layout(
     legend=dict(
         orientation="h", 
         yanchor="bottom", 
-        y=-0.3, 
+        y=-0.25, 
         xanchor="center", 
         x=0.5,
-        itemclick=False,  # Disable legend clicking that might interfere
-        itemdoubleclick=False
-    ), 
-    # COMPLETELY HIDE X-AXIS
+    ),
+    plot_bgcolor="rgba(0,0,0,0)", 
+    paper_bgcolor="rgba(0,0,0,0)",
+    yaxis=dict(
+        tickprefix="$", 
+        tickformat=",.0f",
+        gridcolor='rgba(128,128,128,0.2)'
+    ),
+    # HIDE THE X-AXIS CATEGORY LABELS
     xaxis=dict(
         showticklabels=False,    # Hide tick labels
         showgrid=False,          # Hide grid lines
@@ -696,14 +700,33 @@ fig_cat_ab.update_layout(
         showline=False,          # Hide axis line
         title=""                 # Remove title
     ),
-    plot_bgcolor="rgba(0,0,0,0)", 
-    paper_bgcolor="rgba(0,0,0,0)",
-    yaxis=dict(tickprefix="$", tickformat=",.0f"),
-    margin=dict(l=10, r=10, t=40, b=10), 
-    height=300,
-    hovermode='x unified'  # This makes hover show both groups at the same x position
+    margin=dict(l=10, r=10, t=40, b=30), 
+    height=350,
+    hovermode="x unified",
+    hoverlabel=dict(
+        bgcolor="#1e3a5f",
+        font_size=12,
+        font_color="white",
+        bordercolor="#4299e1"
+    )
 )
+
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
+
+# Add custom category labels below the chart
+st.markdown(f"""
+<div style="display:flex; justify-content:space-around; margin-top:-15px; margin-bottom:10px; padding:0 20px;">
+    <div style="text-align:center; background:#0d1b2a; padding:5px 15px; border-radius:20px; border:1px solid #2d4a6b;">
+        <span style="color:#90cdf4; font-size:0.85rem;">📦 Furniture</span>
+    </div>
+    <div style="text-align:center; background:#0d1b2a; padding:5px 15px; border-radius:20px; border:1px solid #2d4a6b;">
+        <span style="color:#90cdf4; font-size:0.85rem;">📎 Office Supplies</span>
+    </div>
+    <div style="text-align:center; background:#0d1b2a; padding:5px 15px; border-radius:20px; border:1px solid #2d4a6b;">
+        <span style="color:#90cdf4; font-size:0.85rem;">💻 Technology</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
@@ -818,4 +841,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
