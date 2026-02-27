@@ -576,6 +576,8 @@ st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
 # ── Category breakdown side by side (FIXED OVERLAPPING BARS) ─────────────────
 # Calculate both sales and order counts for each category
+# ── Category breakdown side by side (FIXED - SHOW BOTH GROUPS ON HOVER) ─────
+# Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
 
@@ -591,6 +593,15 @@ ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 # Fill any missing order counts with 0
 ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
 
+# Create a pivot table for better hover data
+ab_pivot = pd.pivot_table(
+    ab_cat, 
+    values=['Sales', 'Order Count'], 
+    index='Category', 
+    columns='Group',
+    fill_value=0
+).reset_index()
+
 fig_cat_ab = px.bar(
     ab_cat, 
     x="Category", 
@@ -599,24 +610,29 @@ fig_cat_ab = px.bar(
     barmode="group",
     color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
     labels={"Sales": "Total Sales ($)", "Group": ""},
-    custom_data=["Order Count", "Group", "Category"]  # Add more custom data
 )
 
-# Fix the hover template to show all information clearly
+# Update the hover template to show BOTH groups' information
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{customdata[2]}</b><br>" +
-                  "<span style='color:#4299e1'>🔵 Group A: %{customdata[1]}</span><br>" +
-                  "Sales: $%{y:,.0f}<br>" +
-                  "Orders: %{customdata[0]:,.0f}<br>" +
+    hovertemplate="<b>%{x}</b><br><br>" +
+                  f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
+                  "Sales: $" + f"{ab_cat_a.set_index('Category')['Sales'].to_dict().get('%{x}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_a.set_index('Category')['Order Count'].to_dict().get('%{x}', 0):,.0f}<br><br>" +
+                  f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
+                  "Sales: $" + f"{ab_cat_b.set_index('Category')['Sales'].to_dict().get('%{x}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_b.set_index('Category')['Order Count'].to_dict().get('%{x}', 0):,.0f}<br>" +
                   "<extra></extra>",
     selector={"name": val_a}
 )
 
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{customdata[2]}</b><br>" +
-                  "<span style='color:#e94560'>🔴 Group B: %{customdata[1]}</span><br>" +
-                  "Sales: $%{y:,.0f}<br>" +
-                  "Orders: %{customdata[0]:,.0f}<br>" +
+    hovertemplate="<b>%{x}</b><br><br>" +
+                  f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
+                  "Sales: $" + f"{ab_cat_a.set_index('Category')['Sales'].to_dict().get('%{x}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_a.set_index('Category')['Order Count'].to_dict().get('%{x}', 0):,.0f}<br><br>" +
+                  f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
+                  "Sales: $" + f"{ab_cat_b.set_index('Category')['Sales'].to_dict().get('%{x}', 0):,.0f}<br>" +
+                  "Orders: " + f"{ab_cat_b.set_index('Category')['Order Count'].to_dict().get('%{x}', 0):,.0f}<br>" +
                   "<extra></extra>",
     selector={"name": val_b}
 )
@@ -629,8 +645,6 @@ fig_cat_ab.update_layout(
         y=-0.25, 
         xanchor="center", 
         x=0.5,
-        itemclick=False,
-        itemdoubleclick=False
     ),
     plot_bgcolor="rgba(0,0,0,0)", 
     paper_bgcolor="rgba(0,0,0,0)",
@@ -641,7 +655,7 @@ fig_cat_ab.update_layout(
     ),
     margin=dict(l=10, r=10, t=40, b=60), 
     height=350,
-    hovermode="x",  # Changed from 'x unified' to 'x' for better individual bar hovering
+    hovermode="x unified",  # This is key - shows all info for the same x coordinate
     hoverlabel=dict(
         bgcolor="#1e3a5f",
         font_size=12,
@@ -650,14 +664,14 @@ fig_cat_ab.update_layout(
     )
 )
 
-# Adjust bar width to prevent overlap
-fig_cat_ab.update_traces(
-    width=0.4,  # Make bars narrower
-    marker=dict(
-        line=dict(
-            width=1,
-            color='white'
-        )
+# Add a custom hover label that combines both groups
+fig_cat_ab.update_layout(
+    hoverlabel=dict(
+        bgcolor="#1e3a5f",
+        font_size=12,
+        font_color="white",
+        bordercolor="#4299e1",
+        namelength=-1  # Show full names
     )
 )
 
@@ -775,4 +789,5 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
