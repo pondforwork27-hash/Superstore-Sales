@@ -23,6 +23,10 @@ st.markdown("""
     box-shadow: 0 8px 30px rgba(0,0,0,0.55);
     position: relative; overflow: hidden;
 }
+/* ── Filter label and input text colors ── */
+.filter-bar label { color: #90cdf4 !important; font-size: 0.75rem !important; font-weight: 600 !important; }
+.filter-bar [data-baseweb="select"] input { color: #e2e8f0 !important; }
+.filter-bar [data-baseweb="select"] input::placeholder { color: #4a7fa5 !important; }
 /* ── Multiselect selected tags — match map theme ── */
 span[data-baseweb="tag"] {
     background: linear-gradient(135deg, #1e3a5f, #2d5a8a) !important;
@@ -201,6 +205,7 @@ df = load_data()
 # ── Session state init ────────────────────────────────────────────────────────
 defaults = {
     'clicked_state': None,
+    'clicked_city':  None,
     'sel_region':    [],
     'sel_category':  [],
     'sel_segment':   [],
@@ -276,6 +281,7 @@ if sel_region:   mask &= df['Region'].isin(sel_region)
 if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
+if st.session_state.clicked_city:  mask &= df['City']  == st.session_state.clicked_city
 
 filtered_df = df[mask]
 
@@ -584,11 +590,61 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
-st.header("🏙️ Top 10 Cities by Revenue")
-top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
-top_cities.index += 1
-st.dataframe(
-    top_cities.style.format({'Sales': '${:,.0f}'}),
-    use_container_width=True
+# ── CITIES SLICER ─────────────────────────────────────────────────────────────
+st.header("🏙️ Cities by Revenue")
+st.caption("Click a bar to filter all charts by that city. Click again to clear.")
+
+# Build city sales from the FULL filtered_df (minus city filter) so slicer always shows options
+_city_mask = pd.Series([True] * len(df), index=df.index)
+if sel_region:   _city_mask &= df['Region'].isin(sel_region)
+if sel_category: _city_mask &= df['Category'].isin(sel_category)
+if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
+if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
+_city_base = df[_city_mask]
+
+top_n = st.slider("Number of cities", min_value=5, max_value=30, value=15, step=5)
+city_slicer_df = _city_base.groupby('City')['Sales'].sum().reset_index().sort_values('Sales', ascending=False).head(top_n)
+
+# Highlight selected city
+city_slicer_df['_selected'] = city_slicer_df['City'] == st.session_state.clicked_city
+city_slicer_df['_color'] = city_slicer_df['_selected'].map({True: '#e94560', False: '#4299e1'})
+
+fig_city = go.Figure(go.Bar(
+    x=city_slicer_df['Sales'],
+    y=city_slicer_df['City'],
+    orientation='h',
+    marker_color=city_slicer_df['_color'],
+    hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>",
+    text=city_slicer_df['Sales'].apply(lambda v: f"${v/1000:.0f}K"),
+    textposition='outside',
+    textfont=dict(color='#90cdf4', size=10),
+))
+fig_city.update_layout(
+    yaxis=dict(categoryorder='total ascending', tickfont=dict(color='#e2e8f0')),
+    xaxis=dict(tickprefix='$', tickformat=',.0f', tickfont=dict(color='#a0aec0')),
+    margin=dict(l=10, r=60, t=10, b=10),
+    height=max(300, top_n * 28),
+    plot_bgcolor='rgba(0,0,0,0)',
+    paper_bgcolor='rgba(0,0,0,0)',
 )
+
+city_event = st.plotly_chart(fig_city, use_container_width=True, on_select="rerun", key="city_slicer")
+
+if city_event and city_event.selection and city_event.selection.get("points"):
+    pt = city_event.selection["points"][0]
+    clicked_city_name = pt.get("y") or pt.get("label")
+    if clicked_city_name:
+        if clicked_city_name == st.session_state.clicked_city:
+            st.session_state.clicked_city = None
+        else:
+            st.session_state.clicked_city = clicked_city_name
+        st.rerun()
+
+if st.session_state.clicked_city:
+    c1_, c2_ = st.columns([5, 1])
+    with c1_:
+        st.markdown(f'<div class="state-badge">🏙️ City filter active — <strong>{st.session_state.clicked_city}</strong></div>', unsafe_allow_html=True)
+    with c2_:
+        if st.button("✕ Clear city", use_container_width=True):
+            st.session_state.clicked_city = None
+            st.rerun()
