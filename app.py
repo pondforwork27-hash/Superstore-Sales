@@ -326,6 +326,9 @@ st.markdown("---")
 # ── MAP with Search Box ───────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down · 🔍 Search for a state")
 
+# Calculate all state sales first (MOVE THIS UP)
+all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
+
 # Add search box above the map
 col_search, col_info, col_clear_map = st.columns([3, 2, 1])
 
@@ -394,7 +397,7 @@ if not st.session_state.clicked_state:
     
     st.markdown("</div>", unsafe_allow_html=True)
 
-all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
+# Create the map
 fig_map = px.choropleth(
     all_state_sales, locations='State Code', locationmode="USA-states",
     color='Sales', scope="usa", hover_name='State',
@@ -446,7 +449,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
 c1,c2,c3 = st.columns(3)
@@ -841,3 +843,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
