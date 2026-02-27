@@ -212,6 +212,7 @@ defaults = {
     'sel_region':    [],
     'sel_category':  [],
     'sel_segment':   [],
+    'sel_year':      [],
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -227,8 +228,9 @@ st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class=
 region_opts   = sorted(df['Region'].unique().tolist())
 category_opts = sorted(df['Category'].unique().tolist())
 segment_opts  = sorted(df['Segment'].unique().tolist())
+year_opts     = sorted(df['Year'].unique().tolist())
 
-fc1, fc2, fc3 = st.columns(3)
+fc1, fc2, fc3, fc4 = st.columns(4)
 
 with fc1:
     sel_region = st.multiselect(
@@ -248,11 +250,18 @@ with fc3:
         default=[v for v in st.session_state.sel_segment if v in segment_opts],
         placeholder="All segments", key='_w_segment'
     )
+with fc4:
+    sel_year = st.multiselect(
+        "Year", year_opts,
+        default=[v for v in st.session_state.sel_year if v in year_opts],
+        placeholder="All years", key='_w_year'
+    )
 
 # Sync session state immediately (no Apply needed)
 st.session_state.sel_region   = list(sel_region)
 st.session_state.sel_category = list(sel_category)
 st.session_state.sel_segment  = list(sel_segment)
+st.session_state.sel_year     = list(sel_year)
 
 # Active filter pills
 pills_html = '<div class="active-pills">'
@@ -260,8 +269,9 @@ cs = st.session_state.clicked_state
 for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
 for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
 for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
+for v in sel_year:     pills_html += f'<div class="pill">📅 {v}</div>'
 if cs:                  pills_html += f'<div class="pill state">📍 {cs}</div>'
-if not sel_region and not sel_category and not sel_segment and not cs:
+if not sel_region and not sel_category and not sel_segment and not sel_year and not cs:
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
@@ -283,6 +293,7 @@ mask = pd.Series([True] * len(df), index=df.index)
 if sel_region:   mask &= df['Region'].isin(sel_region)
 if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
+if sel_year:     mask &= df['Year'].isin(sel_year)
 if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
 if st.session_state.clicked_city:  mask &= df['City']  == st.session_state.clicked_city
 
