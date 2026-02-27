@@ -297,59 +297,74 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
-_css_parts = ["<style>"]
-for _, _r in _all_region_stats.iterrows():
-    _reg = _r['Region']
-    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _act  = _reg in st.session_state.sel_region_card
-    _bw   = '3px' if _act else '1.5px'
-    _op   = '1.0' if _act else '0.68'
-    _glow = f'box-shadow:0 0 26px {_border}bb,0 4px 16px rgba(0,0,0,0.5) !important;' if _act else 'box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;'
-    _slug = _reg.lower().replace(' ', '-')
-    _css_parts.append(f"""
-.rcard-{_slug} > div > div > button {{
-    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
-    border: {_bw} solid {_border} !important;
-    border-radius: 16px !important;
-    color: {_accent} !important;
-    min-height: 130px !important;
-    height: auto !important;
-    width: 100% !important;
-    padding: 18px 12px 14px !important;
-    font-size: 0.85rem !important;
-    white-space: pre-line !important;
-    line-height: 1.8 !important;
-    opacity: {_op} !important;
-    {_glow}
-    transition: all 0.2s ease !important;
-    cursor: pointer !important;
-    text-align: center !important;
-}}
-.rcard-{_slug} > div > div > button:hover {{
-    opacity: 1.0 !important;
-    transform: translateY(-4px) scale(1.02) !important;
-    box-shadow: 0 0 22px {_border}aa, 0 8px 20px rgba(0,0,0,0.4) !important;
-    border-color: {_accent} !important;
-}}""")
-_css_parts.append("</style>")
-st.markdown("".join(_css_parts), unsafe_allow_html=True)
+# ── Render region cards ───────────────────────────────────────────────────
+# Visual HTML card + hidden st.button sibling, JS wires card click → button
+st.markdown("""<style>
+.rcard-hidden-btn {
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.rcard-hidden-btn > div,
+.rcard-hidden-btn [data-testid="stButton"],
+.rcard-hidden-btn [data-testid="element-container"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.rcard-hidden-btn button {
+    height: 1px !important;
+    min-height: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+</style>""", unsafe_allow_html=True)
 
-# ── Render cards ──────────────────────────────────────────────────────────
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
-    _region   = _row['Region']
-    _sales    = _row['Sales']
-    _orders   = int(_row['Orders'])
-    _share    = _sales / _grand_total * 100 if _grand_total else 0
-    _icon     = _region_meta[_region][0]
-    _is_act   = _region in st.session_state.sel_region_card
-    _check    = "  ✓" if _is_act else ""
-    _slug     = _region.lower().replace(' ', '-')
-    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
+    _region  = _row['Region']
+    _sales   = _row['Sales']
+    _orders  = int(_row['Orders'])
+    _share   = _sales / _grand_total * 100 if _grand_total else 0
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_region, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _is_act  = _region in st.session_state.sel_region_card
+    _bw      = '3px' if _is_act else '1.5px'
+    _op      = '1.0' if _is_act else '0.72'
+    _glow    = f'box-shadow:0 0 32px {_border}cc,0 6px 20px rgba(0,0,0,0.6);' if _is_act else 'box-shadow:0 4px 14px rgba(0,0,0,0.4);'
+    _check   = "✓ " + _region if _is_act else _region
+    _badge   = (
+        f'<div style="position:absolute;top:12px;right:14px;background:{_border};color:#fff;'
+        f'font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;letter-spacing:.06em;">ACTIVE</div>'
+    ) if _is_act else ''
+    _card_style = (
+        f'position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);'
+        f'border:{_bw} solid {_border};border-radius:20px;padding:28px 20px 24px;'
+        f'text-align:center;opacity:{_op};{_glow}'
+        f'height:130px;display:flex;flex-direction:column;'
+        f'align-items:center;justify-content:center;gap:6px;'
+        f'cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;'
+    )
+    _card_html = (
+        f'<div class="rcard-visual" data-region="{_region}">'
+        f'<div class="rcard-inner" style="{_card_style}">'
+        + _badge +
+        f'<div style="font-size:1.8rem;line-height:1;margin-bottom:2px;">{_icon}</div>'
+        f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check}</div>'
+        f'<div style="font-size:1.1rem;font-weight:800;color:#fff;margin:2px 0;">${_sales:,.0f}</div>'
+        f'<div style="font-size:0.82rem;color:#a0aec0;">{_orders:,} orders</div>'
+        f'<div style="font-size:0.88rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>'
+        '</div></div>'
+    )
 
     with _rc_cols[_idx]:
-        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
-        if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
+        st.markdown(_card_html, unsafe_allow_html=True)
+        st.markdown('<div class="rcard-hidden-btn">', unsafe_allow_html=True)
+        if st.button("x", key=f"rcard_{_region}"):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
                 _cards.remove(_region)
@@ -358,6 +373,47 @@ for _idx, _row in _all_region_stats.iterrows():
             st.session_state.sel_region_card = _cards
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+
+# JS: each .rcard-visual click finds the next .rcard-hidden-btn button sibling and clicks it
+import streamlit.components.v1 as _cv1
+_cv1.html("""<script>
+(function() {
+  function wire() {
+    var doc = window.parent.document;
+    doc.querySelectorAll('.rcard-visual:not([data-wired])').forEach(function(card) {
+      card.setAttribute('data-wired', '1');
+      card.addEventListener('mouseenter', function() {
+        var inner = card.querySelector('.rcard-inner');
+        if (inner) inner.style.transform = 'translateY(-4px) scale(1.02)';
+      });
+      card.addEventListener('mouseleave', function() {
+        var inner = card.querySelector('.rcard-inner');
+        if (inner) inner.style.transform = '';
+      });
+      card.addEventListener('click', function() {
+        // The hidden button is inside .rcard-hidden-btn which is the next
+        // stMarkdown sibling after the stMarkdown containing this card.
+        // Walk up to stVerticalBlock then find the hidden btn.
+        var col = card.closest('[data-testid="column"]') ||
+                  card.closest('[data-testid="stVerticalBlock"]');
+        if (!col) return;
+        var btn = col.querySelector('.rcard-hidden-btn button');
+        if (btn) { btn.click(); return; }
+        // fallback: search all buttons in col
+        var btns = col.querySelectorAll('button');
+        btns.forEach(function(b) {
+          if (b.textContent.trim() === 'x') b.click();
+        });
+      });
+    });
+  }
+  wire();
+  new MutationObserver(wire).observe(
+    window.parent.document.body, {childList:true, subtree:true}
+  );
+})();
+</script>""", height=0)
+
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
