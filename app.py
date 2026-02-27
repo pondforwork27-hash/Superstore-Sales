@@ -1,78 +1,86 @@
+streamlit run app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Set page configuration
-st.set_page_config(page_title="Sales Dashboard", layout="wide")
+st.set_page_config(page_title="Geographic Sales Insights", layout="wide")
 
-# --- DATA LOADING ---
+# State Mapping for the Map
+us_state_to_abbrev = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+    "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+}
+
 @st.cache_data
 def load_data():
     df = pd.read_csv('cleaned_train.csv')
-    df['Order Date'] = pd.to_datetime(df['Order Date'])
+    df['State Code'] = df['State'].map(us_state_to_abbrev)
     return df
 
 df = load_data()
 
-# --- SIDEBAR FILTERING ---
-st.sidebar.header("Filter Data")
-region = st.sidebar.multiselect("Select Region", options=df["Region"].unique(), default=df["Region"].unique())
-category = st.sidebar.multiselect("Select Category", options=df["Category"].unique(), default=df["Category"].unique())
+# --- SIDEBAR ---
+st.sidebar.header("Geography Filters")
+selected_region = st.sidebar.multiselect("Region", df['Region'].unique(), default=df['Region'].unique())
+selected_category = st.sidebar.multiselect("Category", df['Category'].unique(), default=df['Category'].unique())
 
-# Filter the dataframe based on selection
-df_selection = df.query("Region == @region & Category == @category")
+filtered_df = df[(df['Region'].isin(selected_region)) & (df['Category'].isin(selected_category))]
 
-# --- MAIN PAGE ---
-st.title("📊 Sales Performance Dashboard")
-st.markdown("##")
+# --- MAIN DASHBOARD ---
+st.title("🗺️ Regional Sales Intelligence")
 
-# TOP KPI's
-total_sales = int(df_selection["Sales"].sum())
-average_sale = round(df_selection["Sales"].mean(), 2)
-total_orders = df_selection["Order ID"].nunique()
+# 1. MAP SECTION
+st.subheader("Sales Distribution by State")
+state_sales = filtered_df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
 
-left_column, middle_column, right_column = st.columns(3)
-with left_column:
-    st.subheader("Total Sales:")
-    st.subheader(f"US $ {total_sales:,}")
-with middle_column:
-    st.subheader("Average Sale:")
-    st.subheader(f"US $ {average_sale}")
-with right_column:
-    st.subheader("Total Orders:")
-    st.subheader(f"{total_orders}")
-
-st.markdown("""---""")
-
-# --- CHARTS ---
-
-# Sales by Product Category [Bar Chart]
-sales_by_category = df_selection.groupby(by=["Sub-Category"]).sum()[["Sales"]].sort_values(by="Sales")
-fig_category = px.bar(
-    sales_by_category,
-    x="Sales",
-    y=sales_by_category.index,
-    orientation="h",
-    title="<b>Sales by Sub-Category</b>",
-    color_discrete_sequence=["#0083B8"] * len(sales_by_category),
-    template="plotly_white",
+fig_map = px.choropleth(
+    state_sales,
+    locations='State Code',
+    locationmode="USA-states",
+    color='Sales',
+    scope="usa",
+    hover_name='State',
+    color_continuous_scale="Viridis",
+    labels={'Sales': 'Total Sales ($)'}
 )
+fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+st.plotly_chart(fig_map, use_container_width=True)
 
-# Sales by Month [Line Chart]
-sales_by_date = df_selection.groupby(df_selection['Order Date'].dt.to_period('M')).sum()[['Sales']]
-sales_by_date.index = sales_by_date.index.to_timestamp()
-fig_date = px.line(
-    sales_by_date,
-    x=sales_by_date.index,
-    y="Sales",
-    title="<b>Monthly Sales Trend</b>",
-    template="plotly_white",
-)
+# 2. INSIGHTS SECTION
+st.markdown("---")
+st.header("💡 Key Business Insights")
 
-left_chart, right_chart = st.columns(2)
-left_chart.plotly_chart(fig_category, use_container_width=True)
-right_chart.plotly_chart(fig_date, use_container_width=True)
+col1, col2 = st.columns(2)
 
-# Data Table
-with st.expander("View Raw Filtered Data"):
-    st.dataframe(df_selection)
+with col1:
+    st.subheader("Top Performing States")
+    top_states = state_sales.sort_values(by='Sales', ascending=False).head(5)
+    st.table(top_states[['State', 'Sales']])
+    
+    # Automated Text Insight
+    best_state = top_states.iloc[0]['State']
+    st.info(f"**Insight:** {best_state} is your strongest market, contributing the highest volume of sales in the current selection.")
+
+with col2:
+    st.subheader("Category Performance")
+    cat_sales = filtered_df.groupby('Category')['Sales'].sum().reset_index()
+    fig_pie = px.pie(cat_sales, values='Sales', names='Category', hole=0.4)
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+    # Automated Text Insight
+    top_cat = cat_sales.sort_values(by='Sales', ascending=False).iloc[0]['Category']
+    st.success(f"**Insight:** {top_cat} is the dominant category. Focus marketing efforts here to maximize ROI.")
+
+# 3. DEEP DIVE INSIGHT
+st.markdown("---")
+st.subheader("City-Level Leaders")
+top_city = filtered_df.groupby('City')['Sales'].sum().sort_values(ascending=False).head(1).index[0]
+st.write(f"Across the selected filters, **{top_city}** stands out as the #1 city for revenue generation.")
