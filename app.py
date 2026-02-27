@@ -251,14 +251,11 @@ if st.session_state.clicked_state:
             st.session_state.clicked_state = None
             st.rerun()
 
-# ── BUILD filtered_df from APPLIED values ────────────────────────────────────
+# ── BUILD filtered_df ───────────────────────────────────────────────────────────────
 mask = pd.Series([True] * len(df), index=df.index)
-ar = st.session_state.applied_region
-ac = st.session_state.applied_category
-as_ = st.session_state.applied_segment
-if ar  != 'All Regions':    mask &= df['Region']   == ar
-if ac  != 'All Categories': mask &= df['Category'] == ac
-if as_ != 'All Segments':   mask &= df['Segment']  == as_
+if sel_region:   mask &= df['Region'].isin(sel_region)
+if sel_category: mask &= df['Category'].isin(sel_category)
+if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
 
 filtered_df = df[mask]
