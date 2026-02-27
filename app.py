@@ -173,15 +173,10 @@ df = load_data()
 
 # ── Session state init ────────────────────────────────────────────────────────
 defaults = {
-    'clicked_state':    None,
-    # "staged" = what the widgets currently show (lists; empty = all)
-    'staged_region':    [],
-    'staged_category':  [],
-    'staged_segment':   [],
-    # "applied" = what the charts actually use (only updated on Apply)
-    'applied_region':   [],
-    'applied_category': [],
-    'applied_segment':  [],
+    'clicked_state': None,
+    'sel_region':    [],
+    'sel_category':  [],
+    'sel_segment':   [],
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -189,7 +184,7 @@ for k, v in defaults.items():
 
 # ── TITLE ─────────────────────────────────────────────────────────────────────
 st.title("🗺️ Regional Sales Intelligence")
-st.caption("Set filters → click **Apply** to update all charts. Click a state on the map to drill down.")
+st.caption("Select filters to update all charts instantly. Click a state on the map to drill down.")
 
 # ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
 st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
@@ -198,79 +193,48 @@ region_opts   = sorted(df['Region'].unique().tolist())
 category_opts = sorted(df['Category'].unique().tolist())
 segment_opts  = sorted(df['Segment'].unique().tolist())
 
-fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.1, 1.1, 0.65, 0.65])
+fc1, fc2, fc3, fc4 = st.columns([1.2, 1.2, 1.2, 0.7])
 
 with fc1:
-    _def_r = [v for v in st.session_state.staged_region if v in region_opts]
-    staged_region = st.multiselect(
+    sel_region = st.multiselect(
         "Region", region_opts,
-        default=_def_r,
-        placeholder="All regions",
-        key='_w_region'
+        default=[v for v in st.session_state.sel_region if v in region_opts],
+        placeholder="All regions", key='_w_region'
     )
 with fc2:
-    _def_c = [v for v in st.session_state.staged_category if v in category_opts]
-    staged_category = st.multiselect(
+    sel_category = st.multiselect(
         "Category", category_opts,
-        default=_def_c,
-        placeholder="All categories",
-        key='_w_category'
+        default=[v for v in st.session_state.sel_category if v in category_opts],
+        placeholder="All categories", key='_w_category'
     )
 with fc3:
-    _def_s = [v for v in st.session_state.staged_segment if v in segment_opts]
-    staged_segment = st.multiselect(
+    sel_segment = st.multiselect(
         "Segment", segment_opts,
-        default=_def_s,
-        placeholder="All segments",
-        key='_w_segment'
+        default=[v for v in st.session_state.sel_segment if v in segment_opts],
+        placeholder="All segments", key='_w_segment'
     )
 with fc4:
     st.markdown("<div style='height:27px'></div>", unsafe_allow_html=True)
-    apply_clicked = st.button("✅ Apply", use_container_width=True, type="primary")
-with fc5:
-    st.markdown("<div style='height:27px'></div>", unsafe_allow_html=True)
-    reset_clicked = st.button("↺ Reset", use_container_width=True)
+    if st.button("↺ Reset all", use_container_width=True):
+        st.session_state.sel_region   = []
+        st.session_state.sel_category = []
+        st.session_state.sel_segment  = []
+        st.session_state.clicked_state = None
+        st.rerun()
 
-# ── Handle Apply / Reset ──────────────────────────────────────────────────────
-if apply_clicked:
-    st.session_state.staged_region   = staged_region
-    st.session_state.staged_category = staged_category
-    st.session_state.staged_segment  = staged_segment
-    st.session_state.applied_region   = list(staged_region)
-    st.session_state.applied_category = list(staged_category)
-    st.session_state.applied_segment  = list(staged_segment)
-    st.rerun()
-
-if reset_clicked:
-    st.session_state.staged_region   = []
-    st.session_state.staged_category = []
-    st.session_state.staged_segment  = []
-    st.session_state.applied_region   = []
-    st.session_state.applied_category = []
-    st.session_state.applied_segment  = []
-    st.session_state.clicked_state    = None
-    st.rerun()
-
-# Detect if staged differs from applied (pending changes)
-pending = (
-    sorted(staged_region)   != sorted(st.session_state.applied_region) or
-    sorted(staged_category) != sorted(st.session_state.applied_category) or
-    sorted(staged_segment)  != sorted(st.session_state.applied_segment)
-)
-if pending:
-    st.markdown('<div style="margin-top:4px;"><span class="pending-badge">⚠️ Unapplied changes — click Apply</span></div>', unsafe_allow_html=True)
+# Sync session state immediately (no Apply needed)
+st.session_state.sel_region   = list(sel_region)
+st.session_state.sel_category = list(sel_category)
+st.session_state.sel_segment  = list(sel_segment)
 
 # Active filter pills
 pills_html = '<div class="active-pills">'
-ar_ = st.session_state.applied_region
-ac_ = st.session_state.applied_category
-as__ = st.session_state.applied_segment
-cs  = st.session_state.clicked_state
-for v in ar_:  pills_html += f'<div class="pill">🌎 {v}</div>'
-for v in ac_:  pills_html += f'<div class="pill">📦 {v}</div>'
-for v in as__: pills_html += f'<div class="pill">👥 {v}</div>'
-if cs:         pills_html += f'<div class="pill state">📍 {cs}</div>'
-if not ar_ and not ac_ and not as__ and not cs:
+cs = st.session_state.clicked_state
+for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
+for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
+for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
+if cs:                  pills_html += f'<div class="pill state">📍 {cs}</div>'
+if not sel_region and not sel_category and not sel_segment and not cs:
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
@@ -604,9 +568,47 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── TOP CITIES ────────────────────────────────────────────────────────────────
+# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
 st.header("🏙️ Top 10 Cities by Revenue")
 top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
 top_cities.index += 1
-top_cities['Sales'] = top_cities['Sales'].map('${:,.0f}'.format)
-st.dataframe(top_cities, use_container_width=True)
+st.dataframe(
+    top_cities.style.format({'Sales': '${:,.0f}'}),
+    use_container_width=True
+)
+
+st.markdown("---")
+st.header("🗂️ Raw Transaction Data")
+st.caption(f"Showing {len(filtered_df):,} rows matching current filters")
+
+# Search box
+search_term = st.text_input("🔍 Search product, city, customer...", placeholder="Type to filter rows...")
+display_df = filtered_df.copy()
+if search_term:
+    mask_search = display_df.apply(
+        lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1
+    )
+    display_df = display_df[mask_search]
+
+# Format Sales column for display
+display_df = display_df.drop(columns=['State Code','Year','Month'], errors='ignore')
+display_df['Order Date'] = display_df['Order Date'].dt.strftime('%Y-%m-%d')
+display_df['Ship Date']  = display_df['Ship Date'].dt.strftime('%Y-%m-%d') if 'Ship Date' in display_df.columns else display_df.get('Ship Date', '')
+display_df = display_df.sort_values('Sales', ascending=False).reset_index(drop=True)
+display_df.index += 1
+
+st.dataframe(
+    display_df.style.format({'Sales': '${:,.2f}'}),
+    use_container_width=True,
+    height=420
+)
+
+# Download button
+csv_data = display_df.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="⬇️ Download filtered data as CSV",
+    data=csv_data,
+    file_name="filtered_sales.csv",
+    mime="text/csv",
+    use_container_width=True
+)
