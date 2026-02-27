@@ -611,7 +611,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED HOVER - NO DUPLICATE LABELS) ─────
+# ── Category breakdown side by side (FIXED - SHOW NAMES UNDER BARS, ORDERS IN HOVER) ─────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -641,7 +641,7 @@ fig_cat_ab = px.bar(
     labels={"Sales": "Total Sales ($)", "Group": ""},
 )
 
-# Fix hover template for Group A bars
+# Fix hover template for Group A bars - SHOW ORDER COUNT
 fig_cat_ab.update_traces(
     hovertemplate="<b>%{x}</b><br>" +
                   f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
@@ -652,7 +652,7 @@ fig_cat_ab.update_traces(
     selector={"name": val_a}
 )
 
-# Fix hover template for Group B bars
+# Fix hover template for Group B bars - SHOW ORDER COUNT
 fig_cat_ab.update_traces(
     hovertemplate="<b>%{x}</b><br>" +
                   f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
@@ -679,15 +679,13 @@ fig_cat_ab.update_layout(
         tickformat=",.0f",
         gridcolor='rgba(128,128,128,0.2)'
     ),
-    # HIDE THE X-AXIS CATEGORY LABELS
+    # SHOW THE X-AXIS CATEGORY LABELS (removed the hide settings)
     xaxis=dict(
-        showticklabels=False,    # Hide tick labels
-        showgrid=False,          # Hide grid lines
-        zeroline=False,          # Hide zero line
-        showline=False,          # Hide axis line
-        title=""                 # Remove title
+        title="",  # Remove title
+        tickangle=0,  # Keep labels straight
+        tickfont=dict(size=11, color="#90cdf4")  # Style the labels
     ),
-    margin=dict(l=10, r=10, t=40, b=30), 
+    margin=dict(l=10, r=10, t=40, b=50),  # Increased bottom margin for labels
     height=350,
     hovermode="x",  # Shows hover for individual bars
     hoverlabel=dict(
@@ -700,9 +698,47 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# REMOVED THE DUPLICATE CATEGORY LABELS COMPLETELY
-# The chart now has no text below it - just the bars
+# Add order count summary cards below the chart
+col1, col2, col3 = st.columns(3)
 
+with col1:
+    furniture_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_a['Category'].values else 0
+    furniture_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_b['Category'].values else 0
+    st.markdown(f"""
+    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
+        <div style="color:#90cdf4; font-size:0.8rem;">📦 Furniture Orders</div>
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
+            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{furniture_orders_a}</span></div>
+            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{furniture_orders_b}</span></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    office_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_a['Category'].values else 0
+    office_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_b['Category'].values else 0
+    st.markdown(f"""
+    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
+        <div style="color:#90cdf4; font-size:0.8rem;">📎 Office Supplies Orders</div>
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
+            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{office_orders_a}</span></div>
+            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{office_orders_b}</span></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    tech_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_a['Category'].values else 0
+    tech_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_b['Category'].values else 0
+    st.markdown(f"""
+    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
+        <div style="color:#90cdf4; font-size:0.8rem;">💻 Technology Orders</div>
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
+            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{tech_orders_a}</span></div>
+            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{tech_orders_b}</span></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
 winner_tot = max(sa["total"], sb["total"])
@@ -820,4 +856,5 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
