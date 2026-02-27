@@ -201,23 +201,26 @@ segment_opts  = sorted(df['Segment'].unique().tolist())
 fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.1, 1.1, 0.65, 0.65])
 
 with fc1:
+    _def_r = [v for v in st.session_state.staged_region if v in region_opts]
     staged_region = st.multiselect(
         "Region", region_opts,
-        default=st.session_state.staged_region,
+        default=_def_r,
         placeholder="All regions",
         key='_w_region'
     )
 with fc2:
+    _def_c = [v for v in st.session_state.staged_category if v in category_opts]
     staged_category = st.multiselect(
         "Category", category_opts,
-        default=st.session_state.staged_category,
+        default=_def_c,
         placeholder="All categories",
         key='_w_category'
     )
 with fc3:
+    _def_s = [v for v in st.session_state.staged_segment if v in segment_opts]
     staged_segment = st.multiselect(
         "Segment", segment_opts,
-        default=st.session_state.staged_segment,
+        default=_def_s,
         placeholder="All segments",
         key='_w_segment'
     )
