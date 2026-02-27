@@ -565,28 +565,6 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
-st.header("🏙️ Top 10 Cities by Revenue")
-top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
-top_cities.index += 1
-st.dataframe(
-    top_cities.style.format({'Sales': '${:,.0f}'}),
-    use_container_width=True
-)
-
-st.markdown("---")
-st.header("🗂️ Raw Transaction Data")
-st.caption(f"Showing {len(filtered_df):,} rows matching current filters")
-
-# Search box
-search_term = st.text_input("🔍 Search product, city, customer...", placeholder="Type to filter rows...")
-display_df = filtered_df.copy()
-if search_term:
-    mask_search = display_df.apply(
-        lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1
-    )
-    display_df = display_df[mask_search]
-
 # Format Sales column for display
 display_df = display_df.drop(columns=['State Code','Year','Month'], errors='ignore')
 display_df['Order Date'] = display_df['Order Date'].dt.strftime('%Y-%m-%d')
@@ -609,3 +587,4 @@ st.download_button(
     mime="text/csv",
     use_container_width=True
 )
+
