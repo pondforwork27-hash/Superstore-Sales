@@ -323,61 +323,11 @@ k4.metric("🏆 #1 Region",       top_region_row['Region'])
 
 st.markdown("---")
 
-# ── MAP with Search Box ───────────────────────────────────────────────────────
-st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down · 🔍 Search for a state")
+# ── MAP without Search Box ───────────────────────────────────────────────────────
+st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
 # Calculate all state sales first
 all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
-
-# Add search box above the map
-col_search, col_info, col_clear_map = st.columns([3, 2, 1])
-
-with col_search:
-    # Get all state names for search
-    all_states = sorted(df['State'].unique())
-    
-    # Create search box with autocomplete
-    search_state = st.selectbox(
-        "🔍 Search and select a state",
-        options=[""] + all_states,
-        index=0,
-        placeholder="Type state name...",
-        key="state_search",
-        help="Start typing to search for a state"
-    )
-    
-    # If a state is selected via search, update the clicked state
-    if search_state and search_state != "":
-        if search_state != st.session_state.clicked_state:
-            st.session_state.clicked_state = search_state
-            st.rerun()
-
-with col_info:
-    if st.session_state.clicked_state:
-        # Get sales for selected state
-        state_sales_val = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
-        sales_text = f"${state_sales_val[0]:,.0f}" if len(state_sales_val) > 0 else "N/A"
-        
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:10px; padding:8px 15px; margin-top:23px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:#90cdf4; font-size:0.8rem;">📍 SELECTED:</span>
-                <span style="color:white; font-weight:700; font-size:1rem;">{st.session_state.clicked_state}</span>
-                <span style="color:#48bb78; font-size:0.9rem; margin-left:auto;">{sales_text}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-with col_clear_map:
-    if st.session_state.clicked_state:
-        st.markdown("<div style='margin-top:23px;'>", unsafe_allow_html=True)
-        if st.button("✕ Clear", key="clear_state_btn", use_container_width=True):
-            st.session_state.clicked_state = None
-            # Clear the search box
-            if 'state_search' in st.session_state:
-                del st.session_state.state_search
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
 # Quick state filters as pills
 if not st.session_state.clicked_state:
@@ -396,6 +346,31 @@ if not st.session_state.clicked_state:
                 st.rerun()
     
     st.markdown("</div>", unsafe_allow_html=True)
+
+# Show selected state info if any
+if st.session_state.clicked_state:
+    col_info, col_clear_map = st.columns([5, 1])
+    with col_info:
+        # Get sales for selected state
+        state_sales_val = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
+        sales_text = f"${state_sales_val[0]:,.0f}" if len(state_sales_val) > 0 else "N/A"
+        
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:10px; padding:8px 15px; margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:#90cdf4; font-size:0.8rem;">📍 SELECTED:</span>
+                <span style="color:white; font-weight:700; font-size:1rem;">{st.session_state.clicked_state}</span>
+                <span style="color:#48bb78; font-size:0.9rem; margin-left:auto;">{sales_text}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_clear_map:
+        st.markdown("<div style='margin-top:0;'>", unsafe_allow_html=True)
+        if st.button("✕ Clear", key="clear_state_btn", use_container_width=True):
+            st.session_state.clicked_state = None
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # Create the map
 fig_map = px.choropleth(
@@ -428,13 +403,9 @@ if map_event and map_event.selection and map_event.selection.get("points"):
         new_state = abbrev_to_state.get(clicked_abbrev)
         if new_state and new_state != st.session_state.clicked_state:
             st.session_state.clicked_state = new_state
-            # Update search box value
-            st.session_state.state_search = new_state
             st.rerun()
         elif new_state == st.session_state.clicked_state:
             st.session_state.clicked_state = None
-            if 'state_search' in st.session_state:
-                del st.session_state.state_search
             st.rerun()
 
 st.markdown(f"""
@@ -449,7 +420,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
 c1,c2,c3 = st.columns(3)
@@ -848,3 +818,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
