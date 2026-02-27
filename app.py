@@ -124,6 +124,7 @@ def load_data():
     df['DayOfWeek'] = df['Order Date'].dt.day_name()
     df['Month_Year'] = df['Order Date'].dt.strftime('%b %Y')
     df['Year_Month'] = df['Order Date'].dt.to_period('M')
+    df['Year_Quarter'] = df['Order Date'].dt.to_period('Q').astype(str)
     
     # Calculate shipping time
     df['Shipping_Days'] = (df['Ship Date'] - df['Order Date']).dt.days
@@ -289,55 +290,62 @@ with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
-        # Monthly sales trend
-        monthly_sales = filtered_df.groupby('Month_Year')['Sales'].sum().reset_index()
+        # IMPROVED: Year-over-Year Monthly Comparison
+        monthly_sales = filtered_df.groupby(['Year', 'Month'])['Sales'].sum().reset_index()
+        monthly_sales['Date'] = pd.to_datetime(monthly_sales[['Year', 'Month']].assign(day=1))
+        monthly_sales = monthly_sales.sort_values('Date')
         
         fig_monthly = px.line(
             monthly_sales,
-            x='Month_Year',
+            x='Date',
             y='Sales',
-            title='Monthly Sales Trend',
-            markers=True
+            color='Year',
+            title='Monthly Sales by Year (Year-over-Year Comparison)',
+            markers=True,
+            color_discrete_sequence=['#4299e1', '#48bb78', '#ed8936', '#9f7aea']
         )
         fig_monthly.update_traces(
-            line_color='#4299e1',
             line_width=3,
-            marker=dict(size=8, color='#90cdf4'),
-            hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.2f}<extra></extra>'
+            marker=dict(size=8),
+            hovertemplate='<b>%{x|%B %Y}</b><br>Sales: $%{y:,.2f}<extra></extra>'
         )
         fig_monthly.update_layout(
             xaxis_title='',
             yaxis_title='Sales ($)',
             height=400,
-            hovermode='x unified'
+            hovermode='x unified',
+            xaxis=dict(
+                tickformat='%b %Y',
+                tickangle=-45
+            )
         )
         st.plotly_chart(fig_monthly, use_container_width=True)
     
     with col2:
-        # Sales by day of week
-        dow_sales = filtered_df.groupby('DayOfWeek')['Sales'].sum().reset_index()
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        dow_sales['DayOfWeek'] = pd.Categorical(dow_sales['DayOfWeek'], categories=day_order, ordered=True)
-        dow_sales = dow_sales.sort_values('DayOfWeek')
+        # NEW: Quarterly trend (cleaner aggregation)
+        quarterly_sales = filtered_df.groupby(['Year', 'Quarter'])['Sales'].sum().reset_index()
+        quarterly_sales['Quarter_Label'] = quarterly_sales['Year'].astype(str) + '-Q' + quarterly_sales['Quarter'].astype(str)
+        quarterly_sales = quarterly_sales.sort_values(['Year', 'Quarter'])
         
-        fig_dow = px.bar(
-            dow_sales,
-            x='DayOfWeek',
+        fig_quarterly = px.bar(
+            quarterly_sales,
+            x='Quarter_Label',
             y='Sales',
-            title='Sales by Day of Week',
+            title='Quarterly Sales Performance',
             color='Sales',
             color_continuous_scale='Blues'
         )
-        fig_dow.update_traces(
+        fig_quarterly.update_traces(
             hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.2f}<extra></extra>'
         )
-        fig_dow.update_layout(
+        fig_quarterly.update_layout(
             xaxis_title='',
             yaxis_title='Sales ($)',
             height=400,
-            coloraxis_showscale=False
+            coloraxis_showscale=False,
+            xaxis_tickangle=-45
         )
-        st.plotly_chart(fig_dow, use_container_width=True)
+        st.plotly_chart(fig_quarterly, use_container_width=True)
 
 with tab2:
     col1, col2, col3 = st.columns(3)
@@ -604,13 +612,13 @@ with col2:
 
 st.markdown("---")
 
-# ── Product Performance ────────────────────────────────────────────────────
+# ── Product Analysis ────────────────────────────────────────────────────────
 st.header("📦 Product Analysis")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    # Product sub-category performance (without Quantity)
+    # Product sub-category performance
     subcat_stats = filtered_df.groupby('Sub-Category').agg({
         'Sales': 'sum',
         'Order ID': 'nunique'
@@ -635,57 +643,70 @@ with col1:
     st.plotly_chart(fig_subcat_perf, use_container_width=True)
 
 with col2:
-    # Category correlation heatmap (NEW)
-    # Create a pivot table of sales by Category and Segment
-    cat_seg_pivot = filtered_df.pivot_table(
-        values='Sales',
-        index='Category',
-        columns='Segment',
-        aggfunc='sum',
-        fill_value=0
-    )
+    # IMPROVED: Segment Correlation Analysis
+    # Create monthly sales for each segment
+    monthly_segment = filtered_df.groupby(['Year', 'Month', 'Segment'])['Sales'].sum().reset_index()
+    monthly_segment['Date'] = pd.to_datetime(monthly_segment[['Year', 'Month']].assign(day=1))
     
-    # Calculate correlation between categories across segments
-    category_corr = cat_seg_pivot.T.corr()
+    # Pivot for correlation
+    segment_pivot = monthly_segment.pivot(index='Date', columns='Segment', values='Sales').fillna(0)
+    segment_corr = segment_pivot.corr()
     
     # Create correlation heatmap
-    fig_corr = go.Figure(data=go.Heatmap(
-        z=category_corr.values,
-        x=category_corr.columns,
-        y=category_corr.index,
+    fig_seg_corr = go.Figure(data=go.Heatmap(
+        z=segment_corr.values,
+        x=segment_corr.columns,
+        y=segment_corr.index,
         colorscale=[[0, '#0d1b2a'], [0.25, '#1e3a5f'], [0.5, '#2b6cb0'], [0.75, '#4299e1'], [1, '#90cdf4']],
-        zmin=-1,
-        zmax=1,
-        text=[[f"{v:.3f}" for v in row] for row in category_corr.values],
+        zmin=0.5,
+        zmax=1.0,
+        text=[[f"{v:.3f}" for v in row] for row in segment_corr.values],
         texttemplate='%{text}',
-        textfont=dict(size=12, color='white'),
-        hovertemplate='<b>%{y}</b> × <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>'
+        textfont=dict(size=14, color='white'),
+        hovertemplate='<b>%{y}</b> vs <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>'
     ))
     
-    fig_corr.update_layout(
-        title='Category Correlation Matrix<br><sup>How sales patterns correlate across categories</sup>',
+    fig_seg_corr.update_layout(
+        title='Segment Sales Correlation<br><sup>How customer segments move together over time</sup>',
         height=500,
         xaxis_title='',
-        yaxis_title='',
-        xaxis=dict(tickangle=45)
+        yaxis_title=''
     )
-    st.plotly_chart(fig_corr, use_container_width=True)
-
-# Add interpretation for correlation heatmap
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("""
-    <div class="insight-card" style="margin-top: 10px;">
-        <div class="insight-icon">📊</div>
-        <div class="insight-label">Correlation Interpretation</div>
-        <div class="insight-detail">
-            <strong>1.0</strong> = Perfect positive correlation (sales patterns move together)<br>
-            <strong>0.0</strong> = No correlation<br>
-            <strong>-1.0</strong> = Perfect negative correlation (inverse relationship)<br>
-            Higher values suggest categories that perform similarly across customer segments.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.plotly_chart(fig_seg_corr, use_container_width=True)
+    
+    # Find strongest and weakest correlations
+    segs = segment_corr.columns.tolist()
+    corr_pairs = []
+    for i in range(len(segs)):
+        for j in range(i+1, len(segs)):
+            corr_pairs.append((segs[i], segs[j], segment_corr.iloc[i, j]))
+    
+    corr_pairs.sort(key=lambda x: x[2], reverse=True)
+    strongest = corr_pairs[0] if corr_pairs else None
+    weakest = corr_pairs[-1] if corr_pairs else None
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if strongest:
+            st.markdown(f"""
+            <div class="insight-card good" style="margin-top: 10px;">
+                <div class="insight-icon">📈</div>
+                <div class="insight-label">Strongest Correlation</div>
+                <div class="insight-value">{strongest[0]} & {strongest[1]}</div>
+                <div class="insight-detail">r = <strong>{strongest[2]:.3f}</strong> — These segments move together. Campaigns that boost one will likely lift the other.</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col_b:
+        if weakest:
+            st.markdown(f"""
+            <div class="insight-card warn" style="margin-top: 10px;">
+                <div class="insight-icon">📉</div>
+                <div class="insight-label">Weakest Correlation</div>
+                <div class="insight-value">{weakest[0]} & {weakest[1]}</div>
+                <div class="insight-detail">r = <strong>{weakest[2]:.3f}</strong> — These segments behave independently. Tailored strategies recommended.</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 st.markdown("---")
 
