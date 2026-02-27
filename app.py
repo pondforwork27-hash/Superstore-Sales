@@ -183,6 +183,7 @@ defaults = {
     'sel_category':  [],
     'sel_segment':   [],
     'sel_year':      [],
+    'sel_region_card': [],
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -239,7 +240,8 @@ if st.session_state.clicked_state:
 
 # ── BUILD filtered_df ───────────────────────────────────────────────────────
 mask = pd.Series([True] * len(df), index=df.index)
-if sel_region:   mask &= df['Region'].isin(sel_region)
+_active_regions = list(set(sel_region) | set(st.session_state.sel_region_card))
+if _active_regions: mask &= df['Region'].isin(_active_regions)
 if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if sel_year:     mask &= df['Year'].isin(sel_year)
@@ -278,6 +280,74 @@ k1.metric("💰 Total Sales",     f"${total_sales:,.0f}")
 k2.metric("📦 Total Orders",    f"{total_orders:,}")
 k3.metric("🧾 Avg Order Value", f"${avg_order_val:,.0f}")
 k4.metric("🏆 #1 Region",       top_region_row['Region'])
+
+st.markdown("---")
+
+
+# ── REGION FILTER CARDS ─────────────────────────────────────────────────────
+st.subheader("🌎 Filter by Region")
+st.caption("Click a card to filter — click again to deselect. Multiple regions can be active.")
+
+_all_region_stats = df.groupby('Region').agg(
+    Sales=('Sales', 'sum'),
+    Orders=('Order ID', 'nunique'),
+).reset_index().sort_values('Sales', ascending=False).reset_index(drop=True)
+_grand_total = _all_region_stats['Sales'].sum()
+
+_region_meta = {
+    'East':    ('🏙️', 'linear-gradient(135deg,#1a365d,#2b6cb0)', '#4299e1', '#90cdf4'),
+    'West':    ('🌄', 'linear-gradient(135deg,#1a3a2a,#276749)', '#48bb78', '#9ae6b4'),
+    'Central': ('🌾', 'linear-gradient(135deg,#3d2208,#c05621)', '#ed8936', '#fbd38d'),
+    'South':   ('🌴', 'linear-gradient(135deg,#2d1a4e,#6b46c1)', '#9f7aea', '#d6bcfa'),
+}
+
+_rc_cols = st.columns(len(_all_region_stats))
+for idx, row in _all_region_stats.iterrows():
+    region    = row['Region']
+    sales     = row['Sales']
+    orders    = int(row['Orders'])
+    share     = sales / _grand_total * 100 if _grand_total else 0
+    icon, bg, border, accent = _region_meta.get(region, ('🌎', '#1b2a3b', '#4299e1', '#90cdf4'))
+    is_active = region in st.session_state.sel_region_card
+    border_w  = '3px' if is_active else '1px'
+    opacity   = '1'   if is_active else '0.7'
+    glow      = f'box-shadow:0 0 20px {border}88;' if is_active else ''
+    badge     = (
+        f'<div style="position:absolute;top:8px;right:10px;background:{border};'
+        f'color:#fff;font-size:0.6rem;font-weight:700;border-radius:10px;padding:2px 7px;">ACTIVE</div>'
+    ) if is_active else ''
+
+    with _rc_cols[idx]:
+        st.markdown(
+            f'<div style="position:relative;background:{bg};border:{border_w} solid {border};'
+            f'border-radius:14px;padding:16px 12px 10px;text-align:center;'
+            f'opacity:{opacity};{glow}margin-bottom:4px;">'
+            f'{badge}'
+            f'<div style="font-size:1.8rem;line-height:1;">{icon}</div>'
+            f'<div style="color:{accent};font-size:0.68rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:.1em;margin:5px 0 2px;">{region}</div>'
+            f'<div style="color:#fff;font-size:1.2rem;font-weight:700;">${sales:,.0f}</div>'
+            f'<div style="color:#a0aec0;font-size:0.7rem;margin-top:2px;">{orders:,} orders</div>'
+            f'<div style="color:{accent};font-size:0.75rem;font-weight:600;">{share:.1f}% of total</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+        btn_label = f"✓ {region}" if is_active else region
+        if st.button(btn_label, key=f"rcard_{region}", use_container_width=True):
+            cards = list(st.session_state.sel_region_card)
+            if region in cards:
+                cards.remove(region)
+            else:
+                cards.append(region)
+            st.session_state.sel_region_card = cards
+            st.rerun()
+
+if st.session_state.sel_region_card:
+    _, _clr_col = st.columns([4, 1])
+    with _clr_col:
+        if st.button("✕ Clear region filter", key="clear_region_cards", use_container_width=True):
+            st.session_state.sel_region_card = []
+            st.rerun()
 
 st.markdown("---")
 
