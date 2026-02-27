@@ -326,7 +326,7 @@ st.markdown("---")
 # ── MAP with Search Box ───────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down · 🔍 Search for a state")
 
-# Calculate all state sales first (MOVE THIS UP)
+# Calculate all state sales first
 all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
 
 # Add search box above the map
@@ -449,6 +449,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
+
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
 c1,c2,c3 = st.columns(3)
@@ -812,7 +813,7 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── CITIES TABLE ────────────────────────────────────────────────────────────
+# ── CITIES TABLE with STATE column ────────────────────────────────────────────
 st.header("🏙️ Top Cities by Sales")
 
 _city_mask = pd.Series([True] * len(df), index=df.index)
@@ -822,7 +823,8 @@ if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
 _city_base = df[_city_mask]
 
-_agg = _city_base.groupby('City').agg(
+# Updated aggregation to include State
+_agg = _city_base.groupby(['City', 'State']).agg(
     **{
         'Total Sales': ('Sales',       'sum'),
         'Orders':      ('Order ID',    'nunique'),
@@ -832,6 +834,9 @@ _agg = _city_base.groupby('City').agg(
 _agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
 _agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
 _agg.index += 1
+
+# Reorder columns to show State after City
+_agg = _agg[['City', 'State', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
 
 st.dataframe(
     _agg.style.format({
@@ -843,4 +848,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
