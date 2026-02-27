@@ -1,4 +1,3 @@
-streamlit run app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -84,3 +83,4 @@ st.markdown("---")
 st.subheader("City-Level Leaders")
 top_city = filtered_df.groupby('City')['Sales'].sum().sort_values(ascending=False).head(1).index[0]
 st.write(f"Across the selected filters, **{top_city}** stands out as the #1 city for revenue generation.")
+
