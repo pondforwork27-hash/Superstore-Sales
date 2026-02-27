@@ -173,15 +173,15 @@ df = load_data()
 
 # ── Session state init ────────────────────────────────────────────────────────
 defaults = {
-    'clicked_state':   None,
-    # "staged" = what the widgets currently show
-    'staged_region':   'All Regions',
-    'staged_category': 'All Categories',
-    'staged_segment':  'All Segments',
+    'clicked_state':    None,
+    # "staged" = what the widgets currently show (lists; empty = all)
+    'staged_region':    [],
+    'staged_category':  [],
+    'staged_segment':   [],
     # "applied" = what the charts actually use (only updated on Apply)
-    'applied_region':   'All Regions',
-    'applied_category': 'All Categories',
-    'applied_segment':  'All Segments',
+    'applied_region':   [],
+    'applied_category': [],
+    'applied_segment':  [],
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -194,28 +194,31 @@ st.caption("Set filters → click **Apply** to update all charts. Click a state 
 # ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
 st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
 
-region_opts   = ["All Regions"]   + sorted(df['Region'].unique().tolist())
-category_opts = ["All Categories"]+ sorted(df['Category'].unique().tolist())
-segment_opts  = ["All Segments"]  + sorted(df['Segment'].unique().tolist())
+region_opts   = sorted(df['Region'].unique().tolist())
+category_opts = sorted(df['Category'].unique().tolist())
+segment_opts  = sorted(df['Segment'].unique().tolist())
 
 fc1, fc2, fc3, fc4, fc5 = st.columns([1.1, 1.1, 1.1, 0.65, 0.65])
 
 with fc1:
-    staged_region = st.selectbox(
+    staged_region = st.multiselect(
         "Region", region_opts,
-        index=region_opts.index(st.session_state.staged_region),
+        default=st.session_state.staged_region,
+        placeholder="All regions",
         key='_w_region'
     )
 with fc2:
-    staged_category = st.selectbox(
+    staged_category = st.multiselect(
         "Category", category_opts,
-        index=category_opts.index(st.session_state.staged_category),
+        default=st.session_state.staged_category,
+        placeholder="All categories",
         key='_w_category'
     )
 with fc3:
-    staged_segment = st.selectbox(
+    staged_segment = st.multiselect(
         "Segment", segment_opts,
-        index=segment_opts.index(st.session_state.staged_segment),
+        default=st.session_state.staged_segment,
+        placeholder="All segments",
         key='_w_segment'
     )
 with fc4:
@@ -230,41 +233,41 @@ if apply_clicked:
     st.session_state.staged_region   = staged_region
     st.session_state.staged_category = staged_category
     st.session_state.staged_segment  = staged_segment
-    st.session_state.applied_region   = staged_region
-    st.session_state.applied_category = staged_category
-    st.session_state.applied_segment  = staged_segment
+    st.session_state.applied_region   = list(staged_region)
+    st.session_state.applied_category = list(staged_category)
+    st.session_state.applied_segment  = list(staged_segment)
     st.rerun()
 
 if reset_clicked:
-    st.session_state.staged_region   = 'All Regions'
-    st.session_state.staged_category = 'All Categories'
-    st.session_state.staged_segment  = 'All Segments'
-    st.session_state.applied_region   = 'All Regions'
-    st.session_state.applied_category = 'All Categories'
-    st.session_state.applied_segment  = 'All Segments'
+    st.session_state.staged_region   = []
+    st.session_state.staged_category = []
+    st.session_state.staged_segment  = []
+    st.session_state.applied_region   = []
+    st.session_state.applied_category = []
+    st.session_state.applied_segment  = []
     st.session_state.clicked_state    = None
     st.rerun()
 
 # Detect if staged differs from applied (pending changes)
 pending = (
-    staged_region   != st.session_state.applied_region or
-    staged_category != st.session_state.applied_category or
-    staged_segment  != st.session_state.applied_segment
+    sorted(staged_region)   != sorted(st.session_state.applied_region) or
+    sorted(staged_category) != sorted(st.session_state.applied_category) or
+    sorted(staged_segment)  != sorted(st.session_state.applied_segment)
 )
 if pending:
     st.markdown('<div style="margin-top:4px;"><span class="pending-badge">⚠️ Unapplied changes — click Apply</span></div>', unsafe_allow_html=True)
 
 # Active filter pills
 pills_html = '<div class="active-pills">'
-r = st.session_state.applied_region
-c = st.session_state.applied_category
-s = st.session_state.applied_segment
-cs = st.session_state.clicked_state
-if r != 'All Regions':   pills_html += f'<div class="pill">🌎 {r}</div>'
-if c != 'All Categories':pills_html += f'<div class="pill">📦 {c}</div>'
-if s != 'All Segments':  pills_html += f'<div class="pill">👥 {s}</div>'
-if cs:                    pills_html += f'<div class="pill state">📍 {cs}</div>'
-if r == 'All Regions' and c == 'All Categories' and s == 'All Segments' and not cs:
+ar_ = st.session_state.applied_region
+ac_ = st.session_state.applied_category
+as__ = st.session_state.applied_segment
+cs  = st.session_state.clicked_state
+for v in ar_:  pills_html += f'<div class="pill">🌎 {v}</div>'
+for v in ac_:  pills_html += f'<div class="pill">📦 {v}</div>'
+for v in as__: pills_html += f'<div class="pill">👥 {v}</div>'
+if cs:         pills_html += f'<div class="pill state">📍 {cs}</div>'
+if not ar_ and not ac_ and not as__ and not cs:
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
@@ -501,9 +504,10 @@ with corr_cols[1]:
     fig_segcat.update_traces(hovertemplate="<b>%{x}</b><br>Category: %{fullData.name}<br>Share: %{y:.1f}%<extra></extra>")
     fig_segcat.update_layout(
         title=dict(text="Category Mix per Segment (%)", font=dict(size=13), x=0.5),
-        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5, font=dict(size=10)),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.52, xanchor="center", x=0.5, font=dict(size=10)),
+        xaxis=dict(title=None, tickfont=dict(size=11)),
         yaxis=dict(ticksuffix="%"),
-        margin=dict(l=10, r=10, t=40, b=10), height=280
+        margin=dict(l=10, r=10, t=40, b=70), height=300
     )
     st.plotly_chart(fig_segcat, use_container_width=True, key="seg_cat_mix")
 
