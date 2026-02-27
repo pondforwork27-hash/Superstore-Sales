@@ -574,7 +574,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED HOVER ISSUE) ──────────────────────────
+# ── Category breakdown side by side (FIXED OVERLAPPING BARS) ─────────────────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -592,19 +592,33 @@ ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
 
 fig_cat_ab = px.bar(
-    ab_cat, x="Category", y="Sales", color="Group", barmode="group",
+    ab_cat, 
+    x="Category", 
+    y="Sales", 
+    color="Group", 
+    barmode="group",
     color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
     labels={"Sales": "Total Sales ($)", "Group": ""},
-    custom_data=["Order Count", "Group"]  # Add custom data for hover
+    custom_data=["Order Count", "Group", "Category"]  # Add more custom data
 )
 
-# Custom hover template that shows both sales and order count
+# Fix the hover template to show all information clearly
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{x}</b><br>" +
-                  "Group: %{customdata[1]}<br>" +
+    hovertemplate="<b>%{customdata[2]}</b><br>" +
+                  "<span style='color:#4299e1'>🔵 Group A: %{customdata[1]}</span><br>" +
                   "Sales: $%{y:,.0f}<br>" +
                   "Orders: %{customdata[0]:,.0f}<br>" +
-                  "<extra></extra>"
+                  "<extra></extra>",
+    selector={"name": val_a}
+)
+
+fig_cat_ab.update_traces(
+    hovertemplate="<b>%{customdata[2]}</b><br>" +
+                  "<span style='color:#e94560'>🔴 Group B: %{customdata[1]}</span><br>" +
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
+                  "<extra></extra>",
+    selector={"name": val_b}
 )
 
 fig_cat_ab.update_layout(
@@ -612,21 +626,42 @@ fig_cat_ab.update_layout(
     legend=dict(
         orientation="h", 
         yanchor="bottom", 
-        y=-0.3, 
+        y=-0.25, 
         xanchor="center", 
         x=0.5,
-        itemclick=False,  # Disable legend clicking that might interfere
+        itemclick=False,
         itemdoubleclick=False
     ),
     plot_bgcolor="rgba(0,0,0,0)", 
     paper_bgcolor="rgba(0,0,0,0)",
-    yaxis=dict(tickprefix="$", tickformat=",.0f"),
-    margin=dict(l=10, r=10, t=40, b=10), 
-    height=300,
-    hovermode='x unified'  # This makes hover show both groups at the same x position
+    yaxis=dict(
+        tickprefix="$", 
+        tickformat=",.0f",
+        gridcolor='rgba(128,128,128,0.2)'
+    ),
+    margin=dict(l=10, r=10, t=40, b=60), 
+    height=350,
+    hovermode="x",  # Changed from 'x unified' to 'x' for better individual bar hovering
+    hoverlabel=dict(
+        bgcolor="#1e3a5f",
+        font_size=12,
+        font_color="white",
+        bordercolor="#4299e1"
+    )
 )
-st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
+# Adjust bar width to prevent overlap
+fig_cat_ab.update_traces(
+    width=0.4,  # Make bars narrower
+    marker=dict(
+        line=dict(
+            width=1,
+            color='white'
+        )
+    )
+)
+
+st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
 winner_tot = max(sa["total"], sb["total"])
@@ -740,3 +775,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
