@@ -631,20 +631,24 @@ ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
 # Combine for plotting
 ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 
+# Define colors for the bars - matching photo 2 style
+group_a_color = "#FF6B6B"  # Coral red for Central
+group_b_color = "#4ECDC4"   # Turquoise for Corporate
+
 fig_cat_ab = px.bar(
     ab_cat, 
     x="Category", 
     y="Sales", 
     color="Group", 
     barmode="group",
-    color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
+    color_discrete_map={val_a: group_a_color, val_b: group_b_color},
     labels={"Sales": "Total Sales ($)", "Group": ""},
 )
 
 # Disable default hover and use custom hover
 fig_cat_ab.update_traces(
-    hoverinfo="none",  # Disable all default hover info
-    hovertemplate=None,  # Remove default template
+    hoverinfo="none",
+    hovertemplate=None,
     selector={"name": val_a}
 )
 
@@ -656,7 +660,6 @@ fig_cat_ab.update_traces(
 
 # Add custom hover data using scatter traces (invisible points)
 for category in ab_cat_a['Category'].unique():
-    # Get data for this category
     a_data = ab_cat_a[ab_cat_a['Category'] == category]
     b_data = ab_cat_b[ab_cat_b['Category'] == category]
     
@@ -664,20 +667,19 @@ for category in ab_cat_a['Category'].unique():
         a_sales = a_data['Sales'].values[0]
         a_orders = a_data['Order Count'].values[0]
         
-        # Add invisible scatter point for Group A hover
         fig_cat_ab.add_trace(go.Scatter(
             x=[category],
             y=[a_sales],
             mode='markers',
-            marker=dict(size=20, opacity=0),  # Invisible
+            marker=dict(size=20, opacity=0),
             hoverinfo='text',
-            hovertext=f"<span style='color:#4299e1'>🔵 {val_a}</span><br>Sales: ${a_sales:,.0f}<br>Orders: {a_orders}",
+            hovertext=f"<span style='color:{group_a_color}'>🔵 {val_a}</span><br>Sales: ${a_sales:,.0f}<br>Orders: {a_orders}",
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="#1e3a5f",
                 font_size=12,
                 font_color="white",
-                bordercolor="#4299e1"
+                bordercolor=group_a_color
             )
         ))
     
@@ -685,51 +687,43 @@ for category in ab_cat_a['Category'].unique():
         b_sales = b_data['Sales'].values[0]
         b_orders = b_data['Order Count'].values[0]
         
-        # Add invisible scatter point for Group B hover
         fig_cat_ab.add_trace(go.Scatter(
             x=[category],
             y=[b_sales],
             mode='markers',
-            marker=dict(size=20, opacity=0),  # Invisible
+            marker=dict(size=20, opacity=0),
             hoverinfo='text',
-            hovertext=f"<span style='color:#e94560'>🔴 {val_b}</span><br>Sales: ${b_sales:,.0f}<br>Orders: {b_orders}",
+            hovertext=f"<span style='color:{group_b_color}'>🔴 {val_b}</span><br>Sales: ${b_sales:,.0f}<br>Orders: {b_orders}",
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="#1e3a5f",
                 font_size=12,
                 font_color="white",
-                bordercolor="#e94560"
+                bordercolor=group_b_color
             )
         ))
 
+# Create custom legend with colored backgrounds (like photo 2)
 fig_cat_ab.update_layout(
     title=dict(
         text="Category Breakdown — A vs B", 
-        font=dict(size=13, color="#63b3ed"),
+        font=dict(size=13, color="white"),
         x=0.5
     ),
-    legend=dict(
-        orientation="h", 
-        yanchor="bottom", 
-        y=-0.25, 
-        xanchor="center", 
-        x=0.5,
-        font=dict(color="#90cdf4"),
-        bgcolor="rgba(0,0,0,0)"
-    ),
+    # Hide default legend
+    showlegend=False,
     plot_bgcolor="rgba(0,0,0,0)", 
     paper_bgcolor="rgba(0,0,0,0)",
     yaxis=dict(
         tickprefix="$", 
         tickformat=",.0f",
         gridcolor='rgba(128,128,128,0.2)',
-        title=dict(text="Sales ($)", font=dict(color="#90cdf4")),
-        tickfont=dict(color="#90cdf4")
+        title=dict(text="Sales ($)", font=dict(color="white")),
+        tickfont=dict(color="white")
     ),
-    # HIDE the default x-axis labels
     xaxis=dict(
         title="",
-        showticklabels=False,  # Hide default labels
+        showticklabels=False,
         showgrid=False,
         zeroline=False,
         showline=False
@@ -741,15 +735,26 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Add custom category labels with colored backgrounds (like photo 2)
+# Add custom legend with colored backgrounds (like photo 2)
+st.markdown(f"""
+<div style="display:flex; justify-content:center; gap:20px; margin-bottom:15px;">
+    <div style="display:flex; align-items:center; gap:8px; background:{group_a_color}; padding:5px 15px; border-radius:20px;">
+        <span style="color:white; font-weight:600;">🔵 {val_a}</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; background:{group_b_color}; padding:5px 15px; border-radius:20px;">
+        <span style="color:white; font-weight:600;">🔴 {val_b}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Add custom category labels with colored backgrounds
 categories = sorted(filtered_df['Category'].unique())
 category_colors = {
-    'Furniture': '#4299e1',  # Blue
-    'Office Supplies': '#48bb78',  # Green
-    'Technology': '#e94560'  # Red
+    'Furniture': '#FFA07A',  # Light Salmon
+    'Office Supplies': '#98D8C8',  # Mint
+    'Technology': '#D4A5A5'  # Dusty Rose
 }
 
-# Create columns for the category labels
 cols = st.columns(len(categories))
 for i, cat in enumerate(categories):
     color = category_colors.get(cat, '#4299e1')
@@ -765,7 +770,6 @@ for i, cat in enumerate(categories):
             margin-top: -15px;
             margin-bottom: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.1);
         ">
             <span style="color: white; font-weight: 600; font-size: 0.85rem;">
                 {icon} {cat}
@@ -773,18 +777,18 @@ for i, cat in enumerate(categories):
         </div>
         """, unsafe_allow_html=True)
 
-# Add order count summary cards below the chart
+# Add order count summary cards
 col1, col2, col3 = st.columns(3)
 
 with col1:
     furniture_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_a['Category'].values else 0
     furniture_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">📦 Furniture Orders</div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">📦 Furniture Orders</div>
         <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{furniture_orders_a}</span></div>
-            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{furniture_orders_b}</span></div>
+            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{furniture_orders_a}</span></div>
+            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{furniture_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -793,11 +797,11 @@ with col2:
     office_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_a['Category'].values else 0
     office_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">📎 Office Supplies Orders</div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">📎 Office Supplies Orders</div>
         <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{office_orders_a}</span></div>
-            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{office_orders_b}</span></div>
+            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{office_orders_a}</span></div>
+            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{office_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -806,11 +810,11 @@ with col3:
     tech_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_a['Category'].values else 0
     tech_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
-        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">💻 Technology Orders</div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center;">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; margin-bottom:5px;">💻 Technology Orders</div>
         <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
-            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{tech_orders_a}</span></div>
-            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{tech_orders_b}</span></div>
+            <div><span style="color:{group_a_color}; font-weight:600;">🔵</span> <span style="color:white;">{tech_orders_a}</span></div>
+            <div><span style="color:{group_b_color}; font-weight:600;">🔴</span> <span style="color:white;">{tech_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -931,6 +935,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
