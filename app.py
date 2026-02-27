@@ -565,26 +565,11 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# Format Sales column for display
-display_df = display_df.drop(columns=['State Code','Year','Month'], errors='ignore')
-display_df['Order Date'] = display_df['Order Date'].dt.strftime('%Y-%m-%d')
-display_df['Ship Date']  = display_df['Ship Date'].dt.strftime('%Y-%m-%d') if 'Ship Date' in display_df.columns else display_df.get('Ship Date', '')
-display_df = display_df.sort_values('Sales', ascending=False).reset_index(drop=True)
-display_df.index += 1
-
+# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
+st.header("🏙️ Top 10 Cities by Revenue")
+top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+top_cities.index += 1
 st.dataframe(
-    display_df.style.format({'Sales': '${:,.2f}'}),
-    use_container_width=True,
-    height=420
-)
-
-# Download button
-csv_data = display_df.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="⬇️ Download filtered data as CSV",
-    data=csv_data,
-    file_name="filtered_sales.csv",
-    mime="text/csv",
+    top_cities.style.format({'Sales': '${:,.0f}'}),
     use_container_width=True
 )
-
