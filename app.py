@@ -212,10 +212,7 @@ with fc3:
         "Segment", segment_opts,
         default=[v for v in st.session_state.sel_segment if v in segment_opts],
         placeholder="All segments", key='_w_segment'
-    )
-with fc4:
-    st.markdown("<div style='height:27px'></div>", unsafe_allow_html=True)
-    if st.button("↺ Reset all", use_container_width=True):
+    ):
         st.session_state.sel_region   = []
         st.session_state.sel_category = []
         st.session_state.sel_segment  = []
@@ -564,6 +561,7 @@ worst_rs = region_seg.sort_values('Sales').iloc[0]
 st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest performer: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}) — a clear opportunity for targeted growth campaigns.</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
+
 
 
 
