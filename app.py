@@ -272,9 +272,7 @@ def load_data():
     df['Quarter'] = df['Order Date'].dt.to_period('Q').astype(str)
     df['Month_Name'] = df['Order Date'].dt.strftime('%b %Y')
     
-    # Add derived metrics
-    df['Profit_Margin'] = (df['Profit'] / df['Sales'] * 100).round(2)
-    df['Order_Value'] = df['Sales'] / df['Quantity']
+
     
     return df
 
@@ -777,3 +775,4 @@ st.markdown("""
     🗺️ Regional Sales Intelligence Dashboard • Built with Streamlit • Data updates in real-time
 </div>
 """, unsafe_allow_html=True)
+
