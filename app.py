@@ -611,7 +611,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# # ── Category breakdown side by side (FIXED HOVER AND LABELS) ────────────────
+# ── Category breakdown side by side (FIXED HOVER - NO DUPLICATE LABELS) ─────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -700,24 +700,8 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Add custom category labels below the chart (FIXED HTML)
-categories = sorted(filtered_df['Category'].unique())
-category_icons = {
-    'Furniture': '📦',
-    'Office Supplies': '📎',
-    'Technology': '💻'
-}
-
-# Create a clean row of category pills
-cols = st.columns(len(categories))
-for i, cat in enumerate(categories):
-    icon = category_icons.get(cat, '📊')
-    with cols[i]:
-        st.markdown(f"""
-        <div style="text-align:center; background:#0d1b2a; padding:8px 0; border-radius:20px; border:1px solid #2d4a6b; margin-top:-15px;">
-            <span style="color:#90cdf4; font-size:0.85rem; font-weight:500;">{icon} {cat}</span>
-        </div>
-        """, unsafe_allow_html=True)
+# REMOVED THE DUPLICATE CATEGORY LABELS COMPLETELY
+# The chart now has no text below it - just the bars
 
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
