@@ -290,7 +290,7 @@ with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
-        # IMPROVED: Year-over-Year Monthly Comparison
+        # Year-over-Year Monthly Comparison
         monthly_sales = filtered_df.groupby(['Year', 'Month'])['Sales'].sum().reset_index()
         monthly_sales['Date'] = pd.to_datetime(monthly_sales[['Year', 'Month']].assign(day=1))
         monthly_sales = monthly_sales.sort_values('Date')
@@ -322,7 +322,7 @@ with tab1:
         st.plotly_chart(fig_monthly, use_container_width=True)
     
     with col2:
-        # NEW: Quarterly trend (cleaner aggregation)
+        # Quarterly trend
         quarterly_sales = filtered_df.groupby(['Year', 'Quarter'])['Sales'].sum().reset_index()
         quarterly_sales['Quarter_Label'] = quarterly_sales['Year'].astype(str) + '-Q' + quarterly_sales['Quarter'].astype(str)
         quarterly_sales = quarterly_sales.sort_values(['Year', 'Quarter'])
@@ -618,13 +618,22 @@ st.header("📦 Product Analysis")
 col1, col2 = st.columns(2)
 
 with col1:
-    # Product sub-category performance
+    # FIXED: Product sub-category performance scatter plot
     subcat_stats = filtered_df.groupby('Sub-Category').agg({
         'Sales': 'sum',
         'Order ID': 'nunique'
     }).reset_index()
     subcat_stats['Avg Order Value'] = subcat_stats['Sales'] / subcat_stats['Order ID']
     subcat_stats = subcat_stats.sort_values('Sales', ascending=False).head(15)
+    
+    # Create a custom hover text
+    subcat_stats['hover_text'] = subcat_stats.apply(
+        lambda row: f"<b>{row['Sub-Category']}</b><br>" +
+                   f"Sales: ${row['Sales']:,.2f}<br>" +
+                   f"Orders: {row['Order ID']:,.0f}<br>" +
+                   f"Avg Order: ${row['Avg Order Value']:,.2f}",
+        axis=1
+    )
     
     fig_subcat_perf = px.scatter(
         subcat_stats,
@@ -633,17 +642,28 @@ with col1:
         size='Avg Order Value',
         color='Sub-Category',
         title='Sub-Category Performance (Top 15)',
-        hover_data={'Sales': ':,.2f', 'Order ID': ':,.0f', 'Avg Order Value': ':,.2f'}
+        hover_name='Sub-Category',  # This will show the sub-category name
+        hover_data={
+            'Sales': ':,.2f',
+            'Order ID': ':,.0f',
+            'Avg Order Value': ':,.2f',
+            'Sub-Category': False  # Hide duplicate
+        }
     )
     fig_subcat_perf.update_traces(
-        hovertemplate='<b>%{text}</b><br>Sales: $%{y:,.2f}<br>Orders: %{x:,.0f}<br>Avg Order: $%{customdata[0]:,.2f}<extra></extra>',
-        text=subcat_stats['Sub-Category']
+        marker=dict(line=dict(width=1, color='white')),
+        hovertemplate='<b>%{hovertext}</b><br>Sales: $%{customdata[0]:,.2f}<br>Orders: %{customdata[1]:,.0f}<br>Avg Order: $%{customdata[2]:,.2f}<extra></extra>',
+        customdata=subcat_stats[['Sales', 'Order ID', 'Avg Order Value']]
     )
-    fig_subcat_perf.update_layout(height=500)
+    fig_subcat_perf.update_layout(
+        height=500,
+        xaxis_title='Number of Orders',
+        yaxis_title='Total Sales ($)'
+    )
     st.plotly_chart(fig_subcat_perf, use_container_width=True)
 
 with col2:
-    # IMPROVED: Segment Correlation Analysis
+    # Segment Correlation Analysis
     # Create monthly sales for each segment
     monthly_segment = filtered_df.groupby(['Year', 'Month', 'Segment'])['Sales'].sum().reset_index()
     monthly_segment['Date'] = pd.to_datetime(monthly_segment[['Year', 'Month']].assign(day=1))
