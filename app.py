@@ -611,7 +611,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED - SHOW NAMES UNDER BARS, ORDERS IN HOVER) ─────
+# ── Category breakdown side by side (FIXED - NAMES UNDER BARS, NO NAMES IN HOVER) ─────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -641,10 +641,9 @@ fig_cat_ab = px.bar(
     labels={"Sales": "Total Sales ($)", "Group": ""},
 )
 
-# Fix hover template for Group A bars - SHOW ORDER COUNT
+# Fix hover template for Group A bars - REMOVED category name from hover
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{x}</b><br>" +
-                  f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
+    hovertemplate=f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
                   "Sales: $%{y:,.0f}<br>" +
                   "Orders: %{customdata[0]:,.0f}<br>" +
                   "<extra></extra>",
@@ -652,10 +651,9 @@ fig_cat_ab.update_traces(
     selector={"name": val_a}
 )
 
-# Fix hover template for Group B bars - SHOW ORDER COUNT
+# Fix hover template for Group B bars - REMOVED category name from hover
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{x}</b><br>" +
-                  f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
+    hovertemplate=f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
                   "Sales: $%{y:,.0f}<br>" +
                   "Orders: %{customdata[0]:,.0f}<br>" +
                   "<extra></extra>",
@@ -679,7 +677,7 @@ fig_cat_ab.update_layout(
         tickformat=",.0f",
         gridcolor='rgba(128,128,128,0.2)'
     ),
-    # SHOW THE X-AXIS CATEGORY LABELS (removed the hide settings)
+    # SHOW THE X-AXIS CATEGORY LABELS
     xaxis=dict(
         title="",  # Remove title
         tickangle=0,  # Keep labels straight
@@ -856,5 +854,6 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
