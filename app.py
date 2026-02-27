@@ -550,17 +550,46 @@ for col, label, ka, kb in [
         </div>""", unsafe_allow_html=True)
 
 # ── Monthly trend overlay ─────────────────────────────────────────────────────
-# ── Category breakdown side by side ──────────────────────────────────────────
-ab_cat_a = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
-ab_cat_b = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
-ab_cat   = pd.concat([ab_cat_a, ab_cat_b])
+ma = grp_a.groupby("Month")["Sales"].sum().reset_index().sort_values("Month")
+mb = grp_b.groupby("Month")["Sales"].sum().reset_index().sort_values("Month")
+
+fig_ab = go.Figure()
+fig_ab.add_trace(go.Scatter(
+    x=ma["Month"], y=ma["Sales"], name=f"🔵 {val_a}",
+    line=dict(color="#4299e1", width=2.5), mode="lines+markers",
+    hovertemplate=f"<b>{val_a}</b><br>%{{x}}<br>Sales: $%{{y:,.0f}}<extra></extra>"
+))
+fig_ab.add_trace(go.Scatter(
+    x=mb["Month"], y=mb["Sales"], name=f"🔴 {val_b}",
+    line=dict(color="#e94560", width=2.5), mode="lines+markers",
+    hovertemplate=f"<b>{val_b}</b><br>%{{x}}<br>Sales: $%{{y:,.0f}}<extra></extra>"
+))
+fig_ab.update_layout(
+    title=dict(text="Monthly Sales — A vs B", font=dict(size=13), x=0.5),
+    xaxis_tickangle=-45,
+    yaxis=dict(tickprefix="$", tickformat=",.0f"),
+    legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5),
+    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+    margin=dict(l=10, r=10, t=40, b=10), height=320
+)
+st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
+
+# ── Category breakdown side by side (FIXED HOVER ISSUE) ──────────────────────────
+# Calculate both sales and order counts for each category
+ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
+ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
 
 # Add order count data for hover
 ab_cat_a_orders = grp_a.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
 ab_cat_b_orders = grp_b.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
-ab_cat_a = ab_cat_a.merge(ab_cat_a_orders, on="Category")
-ab_cat_b = ab_cat_b.merge(ab_cat_b_orders, on="Category")
-ab_cat   = pd.concat([ab_cat_a, ab_cat_b])
+
+# Merge sales and order data
+ab_cat_a = ab_cat_a_sales.merge(ab_cat_a_orders, on="Category", how="left")
+ab_cat_b = ab_cat_b_sales.merge(ab_cat_b_orders, on="Category", how="left")
+ab_cat = pd.concat([ab_cat_a, ab_cat_b])
+
+# Fill any missing order counts with 0
+ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
 
 fig_cat_ab = px.bar(
     ab_cat, x="Category", y="Sales", color="Group", barmode="group",
@@ -595,26 +624,6 @@ fig_cat_ab.update_layout(
     margin=dict(l=10, r=10, t=40, b=10), 
     height=300,
     hovermode='x unified'  # This makes hover show both groups at the same x position
-)
-st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
-
-# ── Category breakdown side by side ──────────────────────────────────────────
-ab_cat_a = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
-ab_cat_b = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
-ab_cat   = pd.concat([ab_cat_a, ab_cat_b])
-
-fig_cat_ab = px.bar(
-    ab_cat, x="Category", y="Sales", color="Group", barmode="group",
-    color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
-    labels={"Sales": "Total Sales ($)", "Group": ""},
-)
-fig_cat_ab.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}<br>Sales: $%{y:,.0f}<extra></extra>")
-fig_cat_ab.update_layout(
-    title=dict(text="Category Breakdown — A vs B", font=dict(size=13), x=0.5),
-    legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
-    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-    yaxis=dict(tickprefix="$", tickformat=",.0f"),
-    margin=dict(l=10, r=10, t=40, b=10), height=300
 )
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
@@ -731,4 +740,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
