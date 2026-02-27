@@ -328,37 +328,28 @@ for _idx, _row in _all_region_stats.iterrows():
     _trans   = 'translateY(-5px) scale(1.02)' if _is_act else 'none'
 
     with _rc_cols[_idx]:
-        # HTML card (visual layer)
-        st.markdown(f'''
-        <div class="rcard-wrap" id="rcard-{_region.lower().replace(" ","-")}">
-          <div style="
-            position:relative;
-            background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);
-            border:{_bw} solid {_border};
-            border-radius:20px;
-            padding:32px 20px 28px;
-            text-align:center;
-            opacity:{_op};
-            {_glow}
-            transform:{_trans};
-            transition:all 0.2s ease;
-            cursor:pointer;
-            min-height:200px;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:center;
-            gap:6px;
-          ">
-            {_badge}
-            <div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>
-            <div style="font-size:1rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{"✓ " if _is_act else ""}{_region}</div>
-            <div style="font-size:1.4rem;font-weight:800;color:#fff;margin:4px 0;">${_sales:,.0f}</div>
-            <div style="font-size:0.8rem;color:#a0aec0;">{_orders:,} orders</div>
-            <div style="font-size:0.85rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>
-          </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        # Pre-compute to avoid nested quotes in f-string
+        _check_label = "✓ " + _region if _is_act else _region
+        _card_id     = _region.lower().replace(" ", "-")
+        _card_style  = (
+            f"position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);"
+            f"border:{_bw} solid {_border};border-radius:20px;padding:32px 20px 28px;"
+            f"text-align:center;opacity:{_op};{_glow}transform:{_trans};"
+            f"transition:all 0.2s ease;cursor:pointer;min-height:200px;"
+            f"display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"
+        )
+        _card_html = (
+            f'<div class="rcard-wrap" id="rcard-{_card_id}">' +
+            f'<div style="{_card_style}">' +
+            _badge +
+            f'<div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>' +
+            f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check_label}</div>' +
+            f'<div style="font-size:1.5rem;font-weight:800;color:#fff;margin:6px 0;">${_sales:,.0f}</div>' +
+            f'<div style="font-size:0.82rem;color:#a0aec0;">{_orders:,} orders</div>' +
+            f'<div style="font-size:0.88rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>' +
+            '</div></div>'
+        )
+        st.markdown(_card_html, unsafe_allow_html=True)
         # Invisible button on top (clickable layer)
         if st.button(" ", key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
