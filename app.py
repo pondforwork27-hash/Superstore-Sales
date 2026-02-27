@@ -297,40 +297,16 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
-# ── Region card CSS ────────────────────────────────────────────────────────
-# Strategy: render button FIRST (tall + transparent), then card with
-# negative margin-top to slide visually into the button area.
-# Clicks land on the button (z-index higher, rendered first).
+# ── Render region cards ───────────────────────────────────────────────────
+# Visual HTML card + hidden st.button sibling, JS wires card click → button
 st.markdown("""<style>
-.rcard-btn button {
-    height: 220px !important;
-    min-height: 220px !important;
-    width: 100% !important;
-    opacity: 0 !important;
-    cursor: pointer !important;
-    position: relative !important;
-    z-index: 10 !important;
-    background: transparent !important;
-    border: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-.rcard-btn [data-testid="stButton"],
-.rcard-btn [data-testid="element-container"] {
-    height: 220px !important;
-    min-height: 220px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-.rcard-visual {
-    margin-top: -224px !important;
-    position: relative !important;
-    z-index: 1 !important;
-    pointer-events: none !important;
+.rcard-hidden-btn { height:0!important; overflow:hidden!important; margin:0!important; padding:0!important; }
+.rcard-hidden-btn > div, .rcard-hidden-btn button {
+    height:1px!important; min-height:0!important; opacity:0!important;
+    pointer-events:none!important; position:absolute!important; overflow:hidden!important;
 }
 </style>""", unsafe_allow_html=True)
 
-# ── Render cards ──────────────────────────────────────────────────────────
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
     _region  = _row['Region']
@@ -345,18 +321,19 @@ for _idx, _row in _all_region_stats.iterrows():
     _check   = "✓ " + _region if _is_act else _region
     _badge   = (
         f'<div style="position:absolute;top:12px;right:14px;background:{_border};color:#fff;'
-        f'font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;">ACTIVE</div>'
+        f'font-size:0.65rem;font-weight:800;border-radius:10px;padding:3px 9px;letter-spacing:.06em;">ACTIVE</div>'
     ) if _is_act else ''
     _card_style = (
         f'position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);'
-        f'border:{_bw} solid {_border};border-radius:20px;padding:32px 20px 28px;'
+        f'border:{_bw} solid {_border};border-radius:20px;padding:28px 20px 24px;'
         f'text-align:center;opacity:{_op};{_glow}'
-        f'height:220px;display:flex;flex-direction:column;'
+        f'height:210px;display:flex;flex-direction:column;'
         f'align-items:center;justify-content:center;gap:6px;'
+        f'cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;'
     )
     _card_html = (
-        '<div class="rcard-visual">'
-        f'<div style="{_card_style}">'
+        f'<div class="rcard-visual" data-region="{_region}">'
+        f'<div class="rcard-inner" style="{_card_style}">'
         + _badge +
         f'<div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>'
         f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check}</div>'
@@ -367,9 +344,9 @@ for _idx, _row in _all_region_stats.iterrows():
     )
 
     with _rc_cols[_idx]:
-        # 1️⃣ Button FIRST — tall + invisible, sits on top in z-order
-        st.markdown('<div class="rcard-btn">', unsafe_allow_html=True)
-        if st.button(" ", key=f"rcard_{_region}", use_container_width=True):
+        st.markdown(_card_html, unsafe_allow_html=True)
+        st.markdown('<div class="rcard-hidden-btn">', unsafe_allow_html=True)
+        if st.button("x", key=f"rcard_{_region}"):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
                 _cards.remove(_region)
@@ -378,8 +355,47 @@ for _idx, _row in _all_region_stats.iterrows():
             st.session_state.sel_region_card = _cards
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-        # 2️⃣ Card AFTER — negative margin pulls it up into button area
-        st.markdown(_card_html, unsafe_allow_html=True)
+
+# JS: each .rcard-visual click finds the next .rcard-hidden-btn button sibling and clicks it
+import streamlit.components.v1 as _cv1
+_cv1.html("""<script>
+(function() {
+  function wire() {
+    var doc = window.parent.document;
+    doc.querySelectorAll('.rcard-visual:not([data-wired])').forEach(function(card) {
+      card.setAttribute('data-wired', '1');
+      card.addEventListener('mouseenter', function() {
+        var inner = card.querySelector('.rcard-inner');
+        if (inner) inner.style.transform = 'translateY(-4px) scale(1.02)';
+      });
+      card.addEventListener('mouseleave', function() {
+        var inner = card.querySelector('.rcard-inner');
+        if (inner) inner.style.transform = '';
+      });
+      card.addEventListener('click', function() {
+        // The hidden button is inside .rcard-hidden-btn which is the next
+        // stMarkdown sibling after the stMarkdown containing this card.
+        // Walk up to stVerticalBlock then find the hidden btn.
+        var col = card.closest('[data-testid="column"]') ||
+                  card.closest('[data-testid="stVerticalBlock"]');
+        if (!col) return;
+        var btn = col.querySelector('.rcard-hidden-btn button');
+        if (btn) { btn.click(); return; }
+        // fallback: search all buttons in col
+        var btns = col.querySelectorAll('button');
+        btns.forEach(function(b) {
+          if (b.textContent.trim() === 'x') b.click();
+        });
+      });
+    });
+  }
+  wire();
+  new MutationObserver(wire).observe(
+    window.parent.document.body, {childList:true, subtree:true}
+  );
+})();
+</script>""", height=0)
+
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
