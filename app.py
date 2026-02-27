@@ -290,52 +290,74 @@ _all_region_stats = df.groupby('Region').agg(
 _grand_total = _all_region_stats['Sales'].sum()
 
 _region_meta = {
-    'East':    ('🏙️', 'linear-gradient(135deg,#1a365d,#2b6cb0)', '#4299e1', '#90cdf4'),
-    'West':    ('🌄', 'linear-gradient(135deg,#1a3a2a,#276749)', '#48bb78', '#9ae6b4'),
-    'Central': ('🌾', 'linear-gradient(135deg,#3d2208,#c05621)', '#ed8936', '#fbd38d'),
-    'South':   ('🌴', 'linear-gradient(135deg,#2d1a4e,#6b46c1)', '#9f7aea', '#d6bcfa'),
+    'East':    ('🏙️', '#0d2240', '#1a4a80', '#4299e1', '#90cdf4'),
+    'West':    ('🌄', '#0d2a1a', '#1a5c36', '#48bb78', '#9ae6b4'),
+    'Central': ('🌾', '#2a1500', '#a04010', '#ed8936', '#fbd38d'),
+    'South':   ('🌴', '#1e0f38', '#5a35a8', '#9f7aea', '#d6bcfa'),
 }
 
-_rc_cols = st.columns(len(_all_region_stats))
-for idx, row in _all_region_stats.iterrows():
-    region    = row['Region']
-    sales     = row['Sales']
-    orders    = int(row['Orders'])
-    share     = sales / _grand_total * 100 if _grand_total else 0
-    icon, bg, border, accent = _region_meta.get(region, ('🌎', '#1b2a3b', '#4299e1', '#90cdf4'))
-    is_active = region in st.session_state.sel_region_card
-    border_w  = '3px' if is_active else '1px'
-    opacity   = '1'   if is_active else '0.7'
-    glow      = f'box-shadow:0 0 20px {border}88;' if is_active else ''
-    badge     = (
-        f'<div style="position:absolute;top:8px;right:10px;background:{border};'
-        f'color:#fff;font-size:0.6rem;font-weight:700;border-radius:10px;padding:2px 7px;">ACTIVE</div>'
-    ) if is_active else ''
+# ── Per-card CSS: the entire st.button IS the card ────────────────────────
+_css_parts = ["<style>"]
+for _, _r in _all_region_stats.iterrows():
+    _reg = _r['Region']
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _act  = _reg in st.session_state.sel_region_card
+    _bw   = '3px' if _act else '1.5px'
+    _op   = '1.0' if _act else '0.68'
+    _glow = f'box-shadow:0 0 26px {_border}bb,0 4px 16px rgba(0,0,0,0.5) !important;' if _act else 'box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;'
+    _slug = _reg.lower().replace(' ', '-')
+    _css_parts.append(f"""
+.rcard-{_slug} > div > div > button {{
+    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
+    border: {_bw} solid {_border} !important;
+    border-radius: 16px !important;
+    color: {_accent} !important;
+    min-height: 130px !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 18px 12px 14px !important;
+    font-size: 0.85rem !important;
+    white-space: pre-line !important;
+    line-height: 1.8 !important;
+    opacity: {_op} !important;
+    {_glow}
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    text-align: center !important;
+}}
+.rcard-{_slug} > div > div > button:hover {{
+    opacity: 1.0 !important;
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: 0 0 22px {_border}aa, 0 8px 20px rgba(0,0,0,0.4) !important;
+    border-color: {_accent} !important;
+}}""")
+_css_parts.append("</style>")
+st.markdown("".join(_css_parts), unsafe_allow_html=True)
 
-    with _rc_cols[idx]:
-        st.markdown(
-            f'<div style="position:relative;background:{bg};border:{border_w} solid {border};'
-            f'border-radius:14px;padding:16px 12px 10px;text-align:center;'
-            f'opacity:{opacity};{glow}margin-bottom:4px;">'
-            f'{badge}'
-            f'<div style="font-size:1.8rem;line-height:1;">{icon}</div>'
-            f'<div style="color:{accent};font-size:0.68rem;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:.1em;margin:5px 0 2px;">{region}</div>'
-            f'<div style="color:#fff;font-size:1.2rem;font-weight:700;">${sales:,.0f}</div>'
-            f'<div style="color:#a0aec0;font-size:0.7rem;margin-top:2px;">{orders:,} orders</div>'
-            f'<div style="color:{accent};font-size:0.75rem;font-weight:600;">{share:.1f}% of total</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        btn_label = f"✓ {region}" if is_active else region
-        if st.button(btn_label, key=f"rcard_{region}", use_container_width=True):
-            cards = list(st.session_state.sel_region_card)
-            if region in cards:
-                cards.remove(region)
+# ── Render cards ──────────────────────────────────────────────────────────
+_rc_cols = st.columns(len(_all_region_stats))
+for _idx, _row in _all_region_stats.iterrows():
+    _region   = _row['Region']
+    _sales    = _row['Sales']
+    _orders   = int(_row['Orders'])
+    _share    = _sales / _grand_total * 100 if _grand_total else 0
+    _icon     = _region_meta[_region][0]
+    _is_act   = _region in st.session_state.sel_region_card
+    _check    = "  ✓" if _is_act else ""
+    _slug     = _region.lower().replace(' ', '-')
+    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
+
+    with _rc_cols[_idx]:
+        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
+        if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
+            _cards = list(st.session_state.sel_region_card)
+            if _region in _cards:
+                _cards.remove(_region)
             else:
-                cards.append(region)
-            st.session_state.sel_region_card = cards
+                _cards.append(_region)
+            st.session_state.sel_region_card = _cards
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
@@ -349,10 +371,12 @@ st.markdown("---")
 # ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
-all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
+all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
 
-if not st.session_state.clicked_state:
-    st.markdown("""<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px; align-items:center;"><span style="color:#90cdf4; font-size:0.8rem;">⚡ Quick select:</span>""", unsafe_allow_html=True)
+# Map click: quick-select top states (only when no region selected)
+if not st.session_state.clicked_state and not st.session_state.sel_region_card:
+    st.markdown("""<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;align-items:center;">
+        <span style="color:#90cdf4;font-size:0.8rem;">⚡ Quick select:</span>""", unsafe_allow_html=True)
     top_states_quick = all_state_sales.nlargest(5, 'Sales')['State'].tolist()
     quick_cols = st.columns(len(top_states_quick))
     for i, state in enumerate(top_states_quick):
@@ -362,45 +386,91 @@ if not st.session_state.clicked_state:
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
+# Show selected state badge
 if st.session_state.clicked_state:
     col_info, col_clear_map = st.columns([5, 1])
     with col_info:
-        state_sales_val = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
-        sales_text = f"${state_sales_val[0]:,.0f}" if len(state_sales_val) > 0 else "N/A"
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:10px; padding:8px 15px; margin-bottom:15px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:#90cdf4; font-size:0.8rem;">📍 SELECTED:</span>
-                <span style="color:white; font-weight:700; font-size:1rem;">{st.session_state.clicked_state}</span>
-                <span style="color:#48bb78; font-size:0.9rem; margin-left:auto;">{sales_text}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        _sv = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
+        _st = f"${_sv[0]:,.0f}" if len(_sv) > 0 else "N/A"
+        st.markdown(f"""<div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a);border:1px solid #4299e1;
+border-radius:10px;padding:8px 15px;margin-bottom:15px;">
+<div style="display:flex;align-items:center;gap:8px;">
+<span style="color:#90cdf4;font-size:0.8rem;">📍 SELECTED STATE:</span>
+<span style="color:white;font-weight:700;font-size:1rem;">{st.session_state.clicked_state}</span>
+<span style="color:#48bb78;font-size:0.9rem;margin-left:auto;">{_st}</span>
+</div></div>""", unsafe_allow_html=True)
     with col_clear_map:
         if st.button("✕ Clear", key="clear_state_btn", use_container_width=True):
             st.session_state.clicked_state = None
             st.rerun()
 
-fig_map = px.choropleth(
-    all_state_sales, locations='State Code', locationmode="USA-states",
-    color='Sales', scope="usa", hover_name='State',
-    color_continuous_scale="Blues", labels={'Sales':'Total Sales ($)'}
-)
-fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
+# ── Build map with region-aware coloring ──────────────────────────────────
+_region_fill_colors = {
+    'East':    [[0, 'rgba(66,153,225,0.12)'],  [1, 'rgba(66,153,225,0.55)']],
+    'West':    [[0, 'rgba(72,187,120,0.12)'],  [1, 'rgba(72,187,120,0.55)']],
+    'Central': [[0, 'rgba(237,137,54,0.12)'],  [1, 'rgba(237,137,54,0.55)']],
+    'South':   [[0, 'rgba(159,122,234,0.12)'], [1, 'rgba(159,122,234,0.55)']],
+}
+_region_border_colors = {'East':'#4299e1','West':'#48bb78','Central':'#ed8936','South':'#9f7aea'}
 
+_sel_regions = st.session_state.sel_region_card
+
+if _sel_regions:
+    # Base layer: dim ALL states (grey)
+    fig_map = px.choropleth(
+        all_state_sales, locations='State Code', locationmode="USA-states",
+        color='Sales', scope="usa", hover_name='State',
+        color_continuous_scale=[[0,'rgba(40,40,60,0.5)'],[1,'rgba(80,80,100,0.5)']],
+        labels={'Sales': 'Total Sales ($)'}
+    )
+    fig_map.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>",
+        marker_line_color='rgba(100,100,120,0.3)', marker_line_width=0.5
+    )
+    # Overlay: highlight each selected region in its own color
+    for _sreg in _sel_regions:
+        _reg_df = all_state_sales[all_state_sales['State'].isin(
+            df[df['Region'] == _sreg]['State'].unique()
+        )]
+        if not _reg_df.empty:
+            _fcol   = _region_fill_colors.get(_sreg, [[0,'rgba(255,255,255,0.1)'],[1,'rgba(255,255,255,0.5)']])
+            _bcol   = _region_border_colors.get(_sreg, '#ffffff')
+            fig_map.add_trace(go.Choropleth(
+                locations=_reg_df['State Code'].tolist(),
+                z=_reg_df['Sales'].tolist(),
+                locationmode="USA-states",
+                colorscale=_fcol,
+                showscale=False,
+                marker_line_color=_bcol,
+                marker_line_width=2.5,
+                text=_reg_df['State'].tolist(),
+                hovertemplate="<b>%{text}</b><br>Sales: $%{z:,.0f}<br>Region: " + _sreg + "<extra></extra>",
+                name=_sreg,
+            ))
+else:
+    # Normal map: no region selected
+    fig_map = px.choropleth(
+        all_state_sales, locations='State Code', locationmode="USA-states",
+        color='Sales', scope="usa", hover_name='State',
+        color_continuous_scale="Blues", labels={'Sales': 'Total Sales ($)'}
+    )
+    fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
+
+# Clicked state: red border highlight
 if st.session_state.clicked_state:
-    hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
-    if not hl.empty:
+    _hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
+    if not _hl.empty:
         fig_map.add_trace(go.Choropleth(
-            locations=hl['State Code'], z=[1], locationmode="USA-states",
-            colorscale=[[0,"rgba(233,69,96,0)"], [1,"rgba(233,69,96,0)"]],
+            locations=_hl['State Code'], z=[1], locationmode="USA-states",
+            colorscale=[[0,"rgba(233,69,96,0)"],[1,"rgba(233,69,96,0)"]],
             showscale=False, marker_line_color="#e94560",
             marker_line_width=3, hoverinfo='skip',
         ))
 
 fig_map.update_layout(
     margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)',
-    coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$")
+    coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$"),
+    showlegend=False,
 )
 map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map")
 
