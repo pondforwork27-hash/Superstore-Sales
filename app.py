@@ -705,7 +705,7 @@ for category in ab_cat_a['Category'].unique():
 fig_cat_ab.update_layout(
     title=dict(
         text="Category Breakdown — A vs B", 
-        font=dict(size=13, color="#63b3ed"),  # Match filter-title color
+        font=dict(size=13, color="#63b3ed"),
         x=0.5
     ),
     legend=dict(
@@ -714,7 +714,7 @@ fig_cat_ab.update_layout(
         y=-0.25, 
         xanchor="center", 
         x=0.5,
-        font=dict(color="#90cdf4"),  # Match pill text color
+        font=dict(color="#90cdf4"),
         bgcolor="rgba(0,0,0,0)"
     ),
     plot_bgcolor="rgba(0,0,0,0)", 
@@ -723,34 +723,55 @@ fig_cat_ab.update_layout(
         tickprefix="$", 
         tickformat=",.0f",
         gridcolor='rgba(128,128,128,0.2)',
-        title=dict(text="Sales ($)", font=dict(color="#90cdf4")),  # Match pill text color
-        tickfont=dict(color="#90cdf4")  # Match pill text color
+        title=dict(text="Sales ($)", font=dict(color="#90cdf4")),
+        tickfont=dict(color="#90cdf4")
     ),
-    # SHOW THE X-AXIS CATEGORY LABELS WITH UPDATED COLORS
+    # HIDE the default x-axis labels
     xaxis=dict(
-        title="",  # Remove title
-        tickangle=0,  # Keep labels straight
-        tickfont=dict(
-            size=11, 
-            color="#63b3ed",  # Match filter-title color (light blue)
-            weight=600  # Make them slightly bold like the filter-title
-        ),
-        linecolor="#2d4a6b",  # Match border color from pills
-        linewidth=1,
-        showline=True
+        title="",
+        showticklabels=False,  # Hide default labels
+        showgrid=False,
+        zeroline=False,
+        showline=False
     ),
-    margin=dict(l=10, r=10, t=40, b=50),  # Increased bottom margin for labels
+    margin=dict(l=10, r=10, t=40, b=30),
     height=350,
-    hovermode="x",  # Shows hover for individual bars
-)
-
-# Update y-axis grid lines to match theme
-fig_cat_ab.update_yaxes(
-    gridcolor='rgba(45, 74, 107, 0.3)',  # Match border color with opacity
-    griddash='dot'
+    hovermode="x",
 )
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
+
+# Add custom category labels with colored backgrounds (like photo 2)
+categories = sorted(filtered_df['Category'].unique())
+category_colors = {
+    'Furniture': '#4299e1',  # Blue
+    'Office Supplies': '#48bb78',  # Green
+    'Technology': '#e94560'  # Red
+}
+
+# Create columns for the category labels
+cols = st.columns(len(categories))
+for i, cat in enumerate(categories):
+    color = category_colors.get(cat, '#4299e1')
+    icon = '📦' if cat == 'Furniture' else '📎' if cat == 'Office Supplies' else '💻'
+    
+    with cols[i]:
+        st.markdown(f"""
+        <div style="
+            background: {color};
+            border-radius: 20px;
+            padding: 6px 0;
+            text-align: center;
+            margin-top: -15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        ">
+            <span style="color: white; font-weight: 600; font-size: 0.85rem;">
+                {icon} {cat}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Add order count summary cards below the chart
 col1, col2, col3 = st.columns(3)
@@ -910,6 +931,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
