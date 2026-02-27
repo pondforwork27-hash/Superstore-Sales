@@ -218,7 +218,8 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Quick Stats")
 st.sidebar.metric("Total Records", f"{len(filtered_df):,}")
 st.sidebar.metric("Total Sales", f"${filtered_df['Sales'].sum():,.0f}")
-st.sidebar.metric("Avg Order Value", f"${filtered_df['Sales'].mean():,.2f}")
+st.sidebar.metric("Unique Orders", f"{filtered_df['Order ID'].nunique():,}")
+st.sidebar.metric("Unique Customers", f"{filtered_df['Customer ID'].nunique():,}")
 
 if filtered_df.empty:
     st.warning("⚠️ No data matches the selected filters. Please adjust your filters.")
@@ -452,15 +453,14 @@ st.header("🚚 Shipping Performance")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    # Shipping mode distribution
-    ship_counts = filtered_df['Ship Mode'].value_counts().reset_index()
-    ship_counts.columns = ['Ship Mode', 'Count']
+    # Shipping mode distribution (by sales)
+    ship_sales = filtered_df.groupby('Ship Mode')['Sales'].sum().reset_index()
     
     fig_ship = px.pie(
-        ship_counts,
-        values='Count',
+        ship_sales,
+        values='Sales',
         names='Ship Mode',
-        title='Shipping Mode Distribution',
+        title='Sales by Shipping Mode',
         color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1', '#90cdf4']
     )
     fig_ship.update_traces(textposition='inside', textinfo='percent+label')
@@ -489,25 +489,26 @@ with col2:
     st.plotly_chart(fig_ship_days, use_container_width=True)
 
 with col3:
-    # Sales by shipping mode
-    ship_sales = filtered_df.groupby('Ship Mode')['Sales'].sum().reset_index()
-    ship_sales = ship_sales.sort_values('Sales', ascending=False)
+    # Order count by shipping mode
+    ship_counts = filtered_df.groupby('Ship Mode')['Order ID'].nunique().reset_index()
+    ship_counts.columns = ['Ship Mode', 'Order Count']
+    ship_counts = ship_counts.sort_values('Order Count', ascending=False)
     
-    fig_ship_sales = px.bar(
-        ship_sales,
+    fig_ship_counts = px.bar(
+        ship_counts,
         x='Ship Mode',
-        y='Sales',
-        title='Sales by Shipping Mode',
-        color='Sales',
+        y='Order Count',
+        title='Orders by Shipping Mode',
+        color='Order Count',
         color_continuous_scale='Blues'
     )
-    fig_ship_sales.update_layout(
+    fig_ship_counts.update_layout(
         xaxis_title='',
-        yaxis_title='Sales ($)',
+        yaxis_title='Number of Orders',
         height=350,
         coloraxis_showscale=False
     )
-    st.plotly_chart(fig_ship_sales, use_container_width=True)
+    st.plotly_chart(fig_ship_counts, use_container_width=True)
 
 st.markdown("---")
 
@@ -575,23 +576,22 @@ st.header("📦 Product Analysis")
 col1, col2 = st.columns(2)
 
 with col1:
-    # Product sub-category performance
+    # Product sub-category performance (without Quantity)
     subcat_stats = filtered_df.groupby('Sub-Category').agg({
         'Sales': 'sum',
-        'Quantity': 'sum',
         'Order ID': 'nunique'
     }).reset_index()
-    subcat_stats['Avg Price'] = subcat_stats['Sales'] / subcat_stats['Quantity']
-    subcat_stats = subcat_stats.sort_values('Sales', ascending=False)
+    subcat_stats['Avg Order Value'] = subcat_stats['Sales'] / subcat_stats['Order ID']
+    subcat_stats = subcat_stats.sort_values('Sales', ascending=False).head(15)
     
     fig_subcat_perf = px.scatter(
-        subcat_stats.head(15),
-        x='Quantity',
+        subcat_stats,
+        x='Order ID',
         y='Sales',
-        size='Avg Price',
+        size='Avg Order Value',
         color='Sub-Category',
         title='Sub-Category Performance (Top 15)',
-        hover_data=['Avg Price']
+        hover_data=['Avg Order Value']
     )
     fig_subcat_perf.update_layout(height=500)
     st.plotly_chart(fig_subcat_perf, use_container_width=True)
@@ -681,16 +681,15 @@ with col2:
 st.markdown("---")
 
 # ── City Performance Table ─────────────────────────────────────────────────
-st.header("🏙️ City Performance")
+st.header("🏙️ Top Cities by Sales")
 
 city_stats = filtered_df.groupby('City').agg({
     'Sales': 'sum',
     'Order ID': 'nunique',
-    'Customer ID': 'nunique',
-    'Quantity': 'sum'
+    'Customer ID': 'nunique'
 }).reset_index()
 
-city_stats.columns = ['City', 'Total Sales', 'Orders', 'Customers', 'Units Sold']
+city_stats.columns = ['City', 'Total Sales', 'Orders', 'Customers']
 city_stats['Avg Order Value'] = city_stats['Total Sales'] / city_stats['Orders']
 city_stats = city_stats.nlargest(20, 'Total Sales').reset_index(drop=True)
 city_stats.index = range(1, len(city_stats) + 1)
@@ -709,7 +708,6 @@ st.dataframe(
         "Total Sales": "Total Sales",
         "Orders": "Orders",
         "Customers": "Customers",
-        "Units Sold": "Units",
         "Avg Order Value": "Avg Order"
     }
 )
