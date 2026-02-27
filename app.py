@@ -333,8 +333,75 @@ k4.metric("🏆 #1 Region",       top_region_row['Region'])
 
 st.markdown("---")
 
-# ── MAP ───────────────────────────────────────────────────────────────────────
-st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
+# ── MAP with Enhanced Search Box ───────────────────────────────────────────────
+st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down · 🔍 Search for a state")
+
+# Add search box above the map with custom styling
+col_search, col_info, col_clear = st.columns([3, 1, 1])
+with col_search:
+    # Get all state names for search
+    all_states = sorted(df['State'].unique())
+    
+    # Create search box with autocomplete
+    search_state = st.selectbox(
+        "🔍 Search and select a state",
+        options=[""] + all_states,
+        index=0,
+        placeholder="Type state name...",
+        key="state_search",
+        help="Start typing to search for a state"
+    )
+    
+    # If a state is selected via search, update the clicked state
+    if search_state and search_state != "":
+        if search_state != st.session_state.clicked_state:
+            st.session_state.clicked_state = search_state
+            st.rerun()
+
+with col_info:
+    if st.session_state.clicked_state:
+        # Get sales for selected state
+        state_sales_val = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]['Sales'].values
+        sales_text = f"${state_sales_val[0]:,.0f}" if len(state_sales_val) > 0 else "N/A"
+        
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:10px; padding:8px 15px; margin-top:23px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:#90cdf4; font-size:0.8rem;">📍 SELECTED:</span>
+                <span style="color:white; font-weight:700; font-size:1rem;">{st.session_state.clicked_state}</span>
+                <span style="color:#48bb78; font-size:0.9rem; margin-left:auto;">{sales_text}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+with col_clear:
+    if st.session_state.clicked_state:
+        st.markdown("<div style='margin-top:23px;'>", unsafe_allow_html=True)
+        if st.button("✕ Clear State", key="clear_state_btn", use_container_width=True):
+            st.session_state.clicked_state = None
+            # Clear the search box by resetting the session state
+            if 'state_search' in st.session_state:
+                del st.session_state.state_search
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# Quick state filters as pills
+if not st.session_state.clicked_state:
+    st.markdown("""
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px;">
+        <span style="color:#90cdf4; font-size:0.8rem; align-self:center;">Quick select:</span>
+    """, unsafe_allow_html=True)
+    
+    # Show top 5 states as quick filters
+    top_states_quick = all_state_sales.nlargest(5, 'Sales')['State'].tolist()
+    quick_cols = st.columns(len(top_states_quick))
+    for i, state in enumerate(top_states_quick):
+        with quick_cols[i]:
+            if st.button(f"🏆 {state}", key=f"quick_{state}", use_container_width=True):
+                st.session_state.clicked_state = state
+                st.rerun()
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
 all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
 fig_map = px.choropleth(
@@ -367,9 +434,14 @@ if map_event and map_event.selection and map_event.selection.get("points"):
         new_state = abbrev_to_state.get(clicked_abbrev)
         if new_state and new_state != st.session_state.clicked_state:
             st.session_state.clicked_state = new_state
+            # Update search box value
+            st.session_state.state_search = new_state
+            st.rerun()
         elif new_state == st.session_state.clicked_state:
             st.session_state.clicked_state = None
-        st.rerun()
+            if 'state_search' in st.session_state:
+                del st.session_state.state_search
+            st.rerun()
 
 st.markdown(f"""
 <div class="insight-card">
@@ -381,8 +453,6 @@ st.markdown(f"""
   Focus distribution and logistics investments here for maximum impact.</div>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("---")
 
 # ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
 st.header("💡 Key Business Insights")
@@ -748,3 +818,4 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
