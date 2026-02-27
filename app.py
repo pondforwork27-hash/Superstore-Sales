@@ -23,6 +23,33 @@ st.markdown("""
     box-shadow: 0 8px 30px rgba(0,0,0,0.55);
     position: relative; overflow: hidden;
 }
+/* ── Multiselect selected tags — match map theme ── */
+span[data-baseweb="tag"] {
+    background: linear-gradient(135deg, #1e3a5f, #2d5a8a) !important;
+    border: 1px solid #4299e1 !important;
+    border-radius: 20px !important;
+    color: #e2f0fb !important;
+}
+span[data-baseweb="tag"] span { color: #e2f0fb !important; }
+span[data-baseweb="tag"] [role="presentation"] svg { fill: #90cdf4 !important; }
+/* multiselect container */
+[data-baseweb="select"] > div {
+    background: rgba(13,27,42,0.85) !important;
+    border: 1px solid #2d5a8a !important;
+    border-radius: 8px !important;
+}
+[data-baseweb="select"] > div:focus-within {
+    border-color: #4299e1 !important;
+    box-shadow: 0 0 0 2px rgba(66,153,225,0.25) !important;
+}
+/* dropdown menu */
+[data-baseweb="popover"] ul { background: #0d1b2a !important; border: 1px solid #2d5a8a !important; }
+[data-baseweb="popover"] li { color: #cbd5e0 !important; }
+[data-baseweb="popover"] li:hover { background: #1e3a5f !important; color: #fff !important; }
+[data-baseweb="popover"] li[aria-selected="true"] {
+    background: #1a3a6b !important;
+    color: #90cdf4 !important;
+}
 .filter-bar::before {
     content: '';
     position: absolute; top:0; left:0; right:0; bottom:0;
@@ -193,7 +220,7 @@ region_opts   = sorted(df['Region'].unique().tolist())
 category_opts = sorted(df['Category'].unique().tolist())
 segment_opts  = sorted(df['Segment'].unique().tolist())
 
-fc1, fc2, fc3, fc4 = st.columns([1.2, 1.2, 1.2, 0.7])
+fc1, fc2, fc3 = st.columns(3)
 
 with fc1:
     sel_region = st.multiselect(
@@ -213,11 +240,6 @@ with fc3:
         default=[v for v in st.session_state.sel_segment if v in segment_opts],
         placeholder="All segments", key='_w_segment'
     )
-        st.session_state.sel_region   = []
-        st.session_state.sel_category = []
-        st.session_state.sel_segment  = []
-        st.session_state.clicked_state = None
-        st.rerun()
 
 # Sync session state immediately (no Apply needed)
 st.session_state.sel_region   = list(sel_region)
@@ -562,7 +584,11 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-
-
-
-
+# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
+st.header("🏙️ Top 10 Cities by Revenue")
+top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+top_cities.index += 1
+st.dataframe(
+    top_cities.style.format({'Sales': '${:,.0f}'}),
+    use_container_width=True
+)
