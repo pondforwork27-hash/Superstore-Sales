@@ -300,10 +300,14 @@ _region_meta = {
 # ── Render region cards ───────────────────────────────────────────────────
 # Visual HTML card + hidden st.button sibling, JS wires card click → button
 st.markdown("""<style>
-.rcard-hidden-btn { height:0!important; overflow:hidden!important; margin:0!important; padding:0!important; }
-.rcard-hidden-btn > div, .rcard-hidden-btn button {
-    height:1px!important; min-height:0!important; opacity:0!important;
-    pointer-events:none!important; position:absolute!important; overflow:hidden!important;
+.rcard-hidden-btn {
+    position:absolute!important; width:0!important; height:0!important;
+    overflow:hidden!important; margin:0!important; padding:0!important;
+    clip:rect(0,0,0,0)!important; clip-path:inset(50%)!important;
+}
+.rcard-hidden-btn * {
+    position:absolute!important; width:1px!important; height:1px!important;
+    overflow:hidden!important; opacity:0!important; pointer-events:none!important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -327,7 +331,7 @@ for _idx, _row in _all_region_stats.iterrows():
         f'position:relative;background:linear-gradient(145deg,{_bg1} 0%,{_bg2} 100%);'
         f'border:{_bw} solid {_border};border-radius:20px;padding:28px 20px 24px;'
         f'text-align:center;opacity:{_op};{_glow}'
-        f'height:210px;display:flex;flex-direction:column;'
+        f'height:110px;display:flex;flex-direction:column;'
         f'align-items:center;justify-content:center;gap:6px;'
         f'cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;'
     )
@@ -335,9 +339,9 @@ for _idx, _row in _all_region_stats.iterrows():
         f'<div class="rcard-visual" data-region="{_region}">'
         f'<div class="rcard-inner" style="{_card_style}">'
         + _badge +
-        f'<div style="font-size:2.8rem;line-height:1;margin-bottom:4px;">{_icon}</div>'
+        f'<div style="font-size:1.8rem;line-height:1;margin-bottom:2px;">{_icon}</div>'
         f'<div style="font-size:1.05rem;font-weight:700;color:{_accent};text-transform:uppercase;letter-spacing:.1em;">{_check}</div>'
-        f'<div style="font-size:1.5rem;font-weight:800;color:#fff;margin:6px 0;">${_sales:,.0f}</div>'
+        f'<div style="font-size:1.1rem;font-weight:800;color:#fff;margin:2px 0;">${_sales:,.0f}</div>'
         f'<div style="font-size:0.82rem;color:#a0aec0;">{_orders:,} orders</div>'
         f'<div style="font-size:0.88rem;font-weight:600;color:{_accent};">{_share:.1f}% of total</div>'
         '</div></div>'
