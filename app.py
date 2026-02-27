@@ -179,10 +179,6 @@ df = load_data()
 defaults = {
     'clicked_state': None,
     'clicked_city':  None,
-    'clicked_category': None,
-    'clicked_subcategory': None,
-    'clicked_segment': None,
-    'clicked_region': None,
     'sel_region':    [],
     'sel_category':  [],
     'sel_segment':   [],
@@ -195,7 +191,7 @@ for k, v in defaults.items():
 
 # ── TITLE ─────────────────────────────────────────────────────────────────────
 st.title("🗺️ Regional Sales Intelligence")
-st.caption("Select filters to update all charts instantly. Click any chart element to drill down.")
+st.caption("Select filters to update all charts instantly. Click a state on the map to drill down.")
 
 # ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
 st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
@@ -217,31 +213,24 @@ st.session_state.sel_segment  = list(sel_segment)
 st.session_state.sel_year     = list(sel_year)
 
 pills_html = '<div class="active-pills">'
-if st.session_state.clicked_state: pills_html += f'<div class="pill state">📍 State: {st.session_state.clicked_state}</div>'
-if st.session_state.clicked_category: pills_html += f'<div class="pill state">📦 Category: {st.session_state.clicked_category}</div>'
-if st.session_state.clicked_subcategory: pills_html += f'<div class="pill state">🔖 Sub-Category: {st.session_state.clicked_subcategory}</div>'
-if st.session_state.clicked_segment: pills_html += f'<div class="pill state">👥 Segment: {st.session_state.clicked_segment}</div>'
-if st.session_state.clicked_region: pills_html += f'<div class="pill state">🌎 Region: {st.session_state.clicked_region}</div>'
+cs = st.session_state.clicked_state
 for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
 for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
 for v in sel_year:     pills_html += f'<div class="pill">📅 {v}</div>'
-if not sel_category and not sel_segment and not sel_year and not st.session_state.clicked_state and not st.session_state.clicked_category and not st.session_state.clicked_subcategory and not st.session_state.clicked_segment and not st.session_state.clicked_region and not st.session_state.sel_region_card:
+if cs:                  pills_html += f'<div class="pill state">📍 {cs}</div>'
+if not sel_category and not sel_segment and not sel_year and not cs and not st.session_state.sel_region_card:
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-# Clear all filters button
-if st.session_state.clicked_state or st.session_state.clicked_category or st.session_state.clicked_subcategory or st.session_state.clicked_segment or st.session_state.clicked_region:
-    col_clear_all, _ = st.columns([1, 5])
-    with col_clear_all:
-        if st.button("✕ Clear All Filters", use_container_width=True):
+if st.session_state.clicked_state:
+    col_badge, col_clear = st.columns([5, 1])
+    with col_badge:
+        st.markdown(f'<div class="state-badge">📍 Map filter active — <strong>{st.session_state.clicked_state}</strong></div>', unsafe_allow_html=True)
+    with col_clear:
+        if st.button("✕ Clear state", use_container_width=True):
             st.session_state.clicked_state = None
-            st.session_state.clicked_category = None
-            st.session_state.clicked_subcategory = None
-            st.session_state.clicked_segment = None
-            st.session_state.clicked_region = None
-            st.session_state.sel_region_card = []
             st.rerun()
 
 # ── BUILD filtered_df ───────────────────────────────────────────────────────
@@ -252,10 +241,6 @@ if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if sel_year:     mask &= df['Year'].isin(sel_year)
 if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
-if st.session_state.clicked_category: mask &= df['Category'] == st.session_state.clicked_category
-if st.session_state.clicked_subcategory: mask &= df['Sub-Category'] == st.session_state.clicked_subcategory
-if st.session_state.clicked_segment: mask &= df['Segment'] == st.session_state.clicked_segment
-if st.session_state.clicked_region: mask &= df['Region'] == st.session_state.clicked_region
 if st.session_state.clicked_city:  mask &= df['City']  == st.session_state.clicked_city
 
 filtered_df = df[mask]
@@ -277,19 +262,19 @@ region_seg    = filtered_df.groupby(['Region','Segment'])['Sales'].sum().reset_i
 total_sales   = filtered_df['Sales'].sum()
 total_orders  = filtered_df['Order ID'].nunique()
 avg_order_val = total_sales / total_orders if total_orders else 0
-top_state     = state_sales.sort_values('Sales', ascending=False).iloc[0] if not state_sales.empty else None
-top_city_row  = city_sales.sort_values('Sales', ascending=False).iloc[0] if not city_sales.empty else None
-top_cat_row   = cat_sales.sort_values('Sales', ascending=False).iloc[0] if not cat_sales.empty else None
-top_subcat_row= subcat_sales.sort_values('Sales', ascending=False).iloc[0] if not subcat_sales.empty else None
-top_region_row= region_sales.sort_values('Sales', ascending=False).iloc[0] if not region_sales.empty else None
-top_seg_row   = segment_sales.sort_values('Sales', ascending=False).iloc[0] if not segment_sales.empty else None
-state_share   = (top_state['Sales'] / total_sales * 100) if total_sales and top_state is not None else 0
+top_state     = state_sales.sort_values('Sales', ascending=False).iloc[0]
+top_city_row  = city_sales.sort_values('Sales', ascending=False).iloc[0]
+top_cat_row   = cat_sales.sort_values('Sales', ascending=False).iloc[0]
+top_subcat_row= subcat_sales.sort_values('Sales', ascending=False).iloc[0]
+top_region_row= region_sales.sort_values('Sales', ascending=False).iloc[0]
+top_seg_row   = segment_sales.sort_values('Sales', ascending=False).iloc[0]
+state_share   = (top_state['Sales'] / total_sales * 100) if total_sales else 0
 
 k1,k2,k3,k4 = st.columns(4)
 k1.metric("💰 Total Sales",     f"${total_sales:,.0f}")
 k2.metric("📦 Total Orders",    f"{total_orders:,}")
 k3.metric("🧾 Avg Order Value", f"${avg_order_val:,.0f}")
-k4.metric("🏆 #1 Region",       top_region_row['Region'] if top_region_row is not None else "N/A")
+k4.metric("🏆 #1 Region",       top_region_row['Region'])
 
 st.markdown("---")
 
@@ -312,6 +297,7 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
+# ── Region card CSS: overlay transparent button on top of HTML card ──────
 st.markdown("""<style>
 .rcard-wrap { position: relative; margin-bottom: 8px; }
 .rcard-wrap button {
@@ -334,7 +320,7 @@ for _idx, _row in _all_region_stats.iterrows():
     _orders  = int(_row['Orders'])
     _share   = _sales / _grand_total * 100 if _grand_total else 0
     _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_region, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _is_act  = _region in st.session_state.sel_region_card or _region == st.session_state.clicked_region
+    _is_act  = _region in st.session_state.sel_region_card
     _bw      = '3px' if _is_act else '1.5px'
     _op      = '1.0' if _is_act else '0.72'
     _glow    = f'box-shadow:0 0 32px {_border}cc,0 6px 20px rgba(0,0,0,0.6);' if _is_act else 'box-shadow:0 4px 14px rgba(0,0,0,0.4);'
@@ -372,7 +358,6 @@ for _idx, _row in _all_region_stats.iterrows():
             else:
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
-            st.session_state.clicked_region = _region if _region not in _cards else None
             st.rerun()
 
 if st.session_state.sel_region_card:
@@ -380,7 +365,6 @@ if st.session_state.sel_region_card:
     with _clr_col:
         if st.button("✕ Clear region filter", key="clear_region_cards", use_container_width=True):
             st.session_state.sel_region_card = []
-            st.session_state.clicked_region = None
             st.rerun()
 
 st.markdown("---")
@@ -391,7 +375,7 @@ st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down"
 all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
 
 # Map click: quick-select top states (only when no region selected)
-if not st.session_state.clicked_state and not st.session_state.sel_region_card and not st.session_state.clicked_region:
+if not st.session_state.clicked_state and not st.session_state.sel_region_card:
     st.markdown("""<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;align-items:center;">
         <span style="color:#90cdf4;font-size:0.8rem;">⚡ Quick select:</span>""", unsafe_allow_html=True)
     top_states_quick = all_state_sales.nlargest(5, 'Sales')['State'].tolist()
@@ -488,10 +472,8 @@ fig_map.update_layout(
     margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)',
     coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$"),
     showlegend=False,
-    clickmode='event+select',
 )
-
-map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map", selection_mode="points")
+map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map")
 
 if map_event and map_event.selection and map_event.selection.get("points"):
     pt = map_event.selection["points"][0]
@@ -505,16 +487,15 @@ if map_event and map_event.selection and map_event.selection.get("points"):
             st.session_state.clicked_state = None
             st.rerun()
 
-if top_state is not None:
-    st.markdown(f"""
-    <div class="insight-card">
-      <div class="icon">📌</div>
-      <div class="label">Map Insight</div>
-      <div class="value">{top_state['State']} leads all states</div>
-      <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
-      <strong>{state_share:.1f}%</strong> of total revenue in this selection.</div>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"""
+<div class="insight-card">
+  <div class="icon">📌</div>
+  <div class="label">Map Insight</div>
+  <div class="value">{top_state['State']} leads all states</div>
+  <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
+  <strong>{state_share:.1f}%</strong> of total revenue in this selection.</div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -522,20 +503,14 @@ st.markdown("---")
 st.header("💡 Key Business Insights")
 c1,c2,c3 = st.columns(3)
 with c1:
-    if top_state is not None:
-        st.markdown(f'<div class="insight-card good" style="cursor:pointer" onclick="alert(\'Click on the bar chart to select states\')"><div class="icon">🏅</div><div class="label">Top State</div><div class="value">{top_state["State"]}</div><div class="detail">${top_state["Sales"]:,.0f} in sales ({state_share:.1f}% of total)</div></div>', unsafe_allow_html=True)
-    if top_city_row is not None:
-        st.markdown(f'<div class="insight-card"><div class="icon">🏙️</div><div class="label">Top City</div><div class="value">{top_city_row["City"]}</div><div class="detail">${top_city_row["Sales"]:,.0f} — highest city-level revenue driver</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card good"><div class="icon">🏅</div><div class="label">Top State</div><div class="value">{top_state["State"]}</div><div class="detail">${top_state["Sales"]:,.0f} in sales ({state_share:.1f}% of total)</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card"><div class="icon">🏙️</div><div class="label">Top City</div><div class="value">{top_city_row["City"]}</div><div class="detail">${top_city_row["Sales"]:,.0f} — highest city-level revenue driver</div></div>', unsafe_allow_html=True)
 with c2:
-    if top_cat_row is not None:
-        st.markdown(f'<div class="insight-card good"><div class="icon">📦</div><div class="label">Dominant Category</div><div class="value">{top_cat_row["Category"]}</div><div class="detail">${top_cat_row["Sales"]:,.0f} — prime candidate for increased marketing spend</div></div>', unsafe_allow_html=True)
-    if top_subcat_row is not None:
-        st.markdown(f'<div class="insight-card"><div class="icon">🔖</div><div class="label">Top Sub-Category</div><div class="value">{top_subcat_row["Sub-Category"]}</div><div class="detail">${top_subcat_row["Sales"]:,.0f} — highest-earning product sub-group</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card good"><div class="icon">📦</div><div class="label">Dominant Category</div><div class="value">{top_cat_row["Category"]}</div><div class="detail">${top_cat_row["Sales"]:,.0f} — prime candidate for increased marketing spend</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card"><div class="icon">🔖</div><div class="label">Top Sub-Category</div><div class="value">{top_subcat_row["Sub-Category"]}</div><div class="detail">${top_subcat_row["Sales"]:,.0f} — highest-earning product sub-group</div></div>', unsafe_allow_html=True)
 with c3:
-    if top_seg_row is not None:
-        st.markdown(f'<div class="insight-card good"><div class="icon">👥</div><div class="label">Leading Segment</div><div class="value">{top_seg_row["Segment"]}</div><div class="detail">${top_seg_row["Sales"]:,.0f} — your most valuable customer segment</div></div>', unsafe_allow_html=True)
-    if top_region_row is not None:
-        st.markdown(f'<div class="insight-card"><div class="icon">🌎</div><div class="label">Top Region</div><div class="value">{top_region_row["Region"]}</div><div class="detail">${top_region_row["Sales"]:,.0f} — strongest regional market</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card good"><div class="icon">👥</div><div class="label">Leading Segment</div><div class="value">{top_seg_row["Segment"]}</div><div class="detail">${top_seg_row["Sales"]:,.0f} — your most valuable customer segment</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="insight-card"><div class="icon">🌎</div><div class="label">Top Region</div><div class="value">{top_region_row["Region"]}</div><div class="detail">${top_region_row["Sales"]:,.0f} — strongest regional market</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -544,116 +519,57 @@ st.header("📊 Performance Breakdown")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Top 10 States by Sales (Click bars to filter)")
+    st.subheader("Top 10 States by Sales")
     top_states_df = state_sales.sort_values('Sales', ascending=False).head(10)
-    
-    # Highlight clicked state if any
-    bar_colors = ['#4299e1'] * len(top_states_df)
-    if st.session_state.clicked_state and st.session_state.clicked_state in top_states_df['State'].values:
-        idx = top_states_df[top_states_df['State'] == st.session_state.clicked_state].index[0]
-        bar_colors = ['#e94560' if state == st.session_state.clicked_state else '#4299e1' for state in top_states_df['State']]
-    
-    fig_bar = px.bar(
-        top_states_df, 
-        x='Sales', 
-        y='State', 
-        orientation='h',
-        color='State',
-        color_discrete_sequence=bar_colors,
-        labels={'Sales': 'Total Sales ($)', 'State': ''},
-        custom_data=['State']
-    )
-    
-    fig_bar.update_traces(
-        hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<br>Click to filter<extra></extra>",
-        marker=dict(line=dict(width=1, color='DarkSlateGrey')),
-        showlegend=False
-    )
-    
-    fig_bar.update_layout(
-        yaxis={'categoryorder': 'total ascending'}, 
-        clickmode='event+select',
-        height=400
-    )
-    
-    bar_click_data = st.plotly_chart(
-        fig_bar, 
-        use_container_width=True, 
-        key="bar_states",
-        on_select="rerun",
-        selection_mode="points"
-    )
-    
-    if bar_click_data and bar_click_data.selection and bar_click_data.selection.get("points"):
-        point = bar_click_data.selection["points"][0]
-        clicked_state = point.get("y")
-        if clicked_state:
-            if clicked_state == st.session_state.clicked_state:
-                st.session_state.clicked_state = None
-            else:
-                st.session_state.clicked_state = clicked_state
-            st.rerun()
+    fig_bar = px.bar(top_states_df, x='Sales', y='State', orientation='h',
+                     color='Sales', color_continuous_scale='Blues', labels={'Sales':'Total Sales ($)'})
+    fig_bar.update_traces(hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>")
+    fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, coloraxis_showscale=False)
+    st.plotly_chart(fig_bar, use_container_width=True, key="bar_states")
 
 with col2:
-    st.subheader("Category & Segment Mix (Click segments to filter)")
-    _sun_df = filtered_df.groupby(['Category', 'Segment'])['Sales'].sum().reset_index()
+    st.subheader("Category & Segment Mix")
+    _sun_df = filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index()
     _sun_cmap = {
-        "Consumer": "#1a56a0",
-        "Corporate": "#4299e1",
-        "Home Office": "#90cdf4",
-        "Furniture": "#1a365d",
+        "Consumer":        "#1a56a0",
+        "Corporate":       "#4299e1",
+        "Home Office":     "#90cdf4",
+        "Furniture":       "#1a365d",
         "Office Supplies": "#1e4a6e",
-        "Technology": "#17364f",
-        "(?)": "#0d1b2a",
+        "Technology":      "#17364f",
+        "(?)":             "#0d1b2a",
     }
-    
     fig_sun = px.sunburst(
-        _sun_df, 
-        path=['Category', 'Segment'], 
-        values='Sales',
-        color='Segment', 
-        color_discrete_map=_sun_cmap,
-        custom_data=['Segment', 'Category']
+        _sun_df, path=['Category','Segment'], values='Sales',
+        color='Segment', color_discrete_map=_sun_cmap
     )
-    
     fig_sun.update_traces(
-        hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<br>Click to filter<extra></extra>",
+        hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
         textfont=dict(size=11),
-        insidetextorientation='radial'
+        insidetextorientation='radial',
+        marker=dict(colors=[_sun_cmap.get(lbl, "#1e3a5f") for lbl in fig_sun.data[0].labels])
     )
-    
-    fig_sun.update_layout(
-        clickmode='event+select',
-        height=400
-    )
-    
-    sun_click_data = st.plotly_chart(
-        fig_sun, 
-        use_container_width=True, 
-        key="sunburst_cat",
-        on_select="rerun",
-        selection_mode="points"
-    )
-    
-    if sun_click_data and sun_click_data.selection and sun_click_data.selection.get("points"):
-        point = sun_click_data.selection["points"][0]
-        clicked_label = point.get("label")
-        clicked_parent = point.get("parent")
-        
-        # Determine if clicked on Category or Segment
-        if clicked_label in ['Consumer', 'Corporate', 'Home Office']:
-            if clicked_label == st.session_state.clicked_segment:
-                st.session_state.clicked_segment = None
-            else:
-                st.session_state.clicked_segment = clicked_label
-                st.session_state.clicked_category = None
-        elif clicked_label in ['Furniture', 'Office Supplies', 'Technology']:
-            if clicked_label == st.session_state.clicked_category:
-                st.session_state.clicked_category = None
-            else:
-                st.session_state.clicked_category = clicked_label
-                st.session_state.clicked_segment = None
-        st.rerun()
+    fig_sun.update_layout(showlegend=True, legend=dict(
+        orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5,
+        font=dict(size=11), title=dict(text="Segment  ", font=dict(size=11))
+    ))
+    st.plotly_chart(fig_sun, use_container_width=True, key="sunburst_cat")
+    st.markdown('''
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:-8px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#1a56a0;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Consumer</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#4299e1;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Corporate</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#90cdf4;"></div>
+        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Home Office</span>
+      </div>
+    </div>
+    ''', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -664,36 +580,36 @@ st.caption("Pick two groups across any dimension — compare their sales, order 
 ab_c1, ab_c2 = st.columns(2)
 
 _ab_dims = {
-    "Region": "Region",
-    "Category": "Category",
+    "Region":       "Region",
+    "Category":     "Category",
     "Sub-Category": "Sub-Category",
-    "Segment": "Segment",
-    "Ship Mode": "Ship Mode",
-    "State": "State",
+    "Segment":      "Segment",
+    "Ship Mode":    "Ship Mode",
+    "State":        "State",
 }
 
 with ab_c1:
     st.markdown("#### 🔵 Group A")
-    dim_a = st.selectbox("Dimension", list(_ab_dims.keys()), key="ab_dim_a")
+    dim_a  = st.selectbox("Dimension", list(_ab_dims.keys()), key="ab_dim_a")
     opts_a = sorted(filtered_df[_ab_dims[dim_a]].unique().tolist())
-    val_a = st.selectbox("Value", opts_a, key="ab_val_a")
+    val_a  = st.selectbox("Value", opts_a, key="ab_val_a")
 
 with ab_c2:
     st.markdown("#### 🔴 Group B")
-    dim_b = st.selectbox("Dimension", list(_ab_dims.keys()), key="ab_dim_b", index=list(_ab_dims.keys()).index("Segment") if "Segment" in _ab_dims else 0)
+    dim_b  = st.selectbox("Dimension", list(_ab_dims.keys()), key="ab_dim_b", index=list(_ab_dims.keys()).index("Segment") if "Segment" in _ab_dims else 0)
     opts_b = sorted(filtered_df[_ab_dims[dim_b]].unique().tolist())
-    val_b = st.selectbox("Value", opts_b, key="ab_val_b", index=min(1, len(opts_b)-1))
+    val_b  = st.selectbox("Value", opts_b, key="ab_val_b", index=min(1, len(opts_b)-1))
 
 grp_a = filtered_df[filtered_df[_ab_dims[dim_a]] == val_a]
 grp_b = filtered_df[filtered_df[_ab_dims[dim_b]] == val_b]
 
 def _ab_stats(grp):
-    total = grp["Sales"].sum()
-    orders = grp["Order ID"].nunique()
+    total   = grp["Sales"].sum()
+    orders  = grp["Order ID"].nunique()
     avg_ord = total / orders if orders else 0
     top_cat = grp.groupby("Category")["Sales"].sum().idxmax() if not grp.empty else "—"
     top_sub = grp.groupby("Sub-Category")["Sales"].sum().idxmax() if not grp.empty else "—"
-    top_st = grp.groupby("State")["Sales"].sum().idxmax() if not grp.empty else "—"
+    top_st  = grp.groupby("State")["Sales"].sum().idxmax() if not grp.empty else "—"
     return dict(total=total, orders=orders, avg_ord=avg_ord,
                 top_cat=top_cat, top_sub=top_sub, top_st=top_st)
 
@@ -706,9 +622,9 @@ def _delta(a, b):
     return (a - b) / b * 100
 
 for col, label, ka, kb in [
-    (k1, "💰 Total Sales", sa["total"], sb["total"]),
-    (k2, "📦 Total Orders", sa["orders"], sb["orders"]),
-    (k3, "🧾 Avg Order Value", sa["avg_ord"], sb["avg_ord"]),
+    (k1, "💰 Total Sales",      sa["total"],   sb["total"]),
+    (k2, "📦 Total Orders",     sa["orders"],  sb["orders"]),
+    (k3, "🧾 Avg Order Value",  sa["avg_ord"], sb["avg_ord"]),
 ]:
     with col:
         d = _delta(ka, kb)
@@ -760,15 +676,15 @@ fig_ab.update_layout(
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
 # ── Category breakdown A vs B ─────────────────────────────────────────────────
-st.subheader("Category Breakdown (Click bars to filter)")
-
-ab_cat_a = grp_a.groupby("Category").agg(Sales=("Sales", "sum"), **{"Order Count": ("Order ID", "nunique")}).reset_index().assign(Group=val_a)
-ab_cat_b = grp_b.groupby("Category").agg(Sales=("Sales", "sum"), **{"Order Count": ("Order ID", "nunique")}).reset_index().assign(Group=val_b)
-ab_cat = pd.concat([ab_cat_a, ab_cat_b], ignore_index=True)
+# Build dataframes with order counts
+ab_cat_a = grp_a.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_a)
+ab_cat_b = grp_b.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_b)
+ab_cat   = pd.concat([ab_cat_a, ab_cat_b], ignore_index=True)
 
 group_a_color = "#4299e1"
 group_b_color = "#e94560"
 
+# ── FIX: use custom_data + for_each_trace to inject group name per trace ──────
 fig_cat_ab = px.bar(
     ab_cat,
     x="Category",
@@ -777,17 +693,18 @@ fig_cat_ab = px.bar(
     barmode="group",
     color_discrete_map={val_a: group_a_color, val_b: group_b_color},
     labels={"Sales": "Total Sales ($)", "Group": ""},
-    custom_data=["Order Count", "Group", "Category"]
+    custom_data=["Order Count", "Group"],
 )
 
+# Inject correct group name directly into each trace's hovertemplate
 fig_cat_ab.for_each_trace(
     lambda t: t.update(
         hovertemplate=(
             f"<b>{t.name}</b><br>"
             "<b>%{x}</b><br>"
             "Sales: $%{y:,.0f}<br>"
-            "Orders: %{customdata[0]:,}<br>"
-            "Click to filter<extra></extra>"
+            "Orders: %{customdata[0]:,}"
+            "<extra></extra>"
         )
     )
 )
@@ -803,34 +720,13 @@ fig_cat_ab.update_layout(
         title=dict(text="Sales ($)", font=dict(color="white")),
         tickfont=dict(color="white")
     ),
-    xaxis=dict(title="", tickangle=0),
+    xaxis=dict(title="", showticklabels=False, showgrid=False, zeroline=False, showline=False),
     margin=dict(l=10, r=10, t=40, b=30),
     height=350,
     hovermode="closest",
-    clickmode='event+select'
 )
 
-cat_bar_click = st.plotly_chart(
-    fig_cat_ab, 
-    use_container_width=True, 
-    key="ab_cat",
-    on_select="rerun",
-    selection_mode="points"
-)
-
-if cat_bar_click and cat_bar_click.selection and cat_bar_click.selection.get("points"):
-    point = cat_bar_click.selection["points"][0]
-    clicked_category = point.get("x")
-    clicked_group = point.get("legendgroup")
-    
-    if clicked_category:
-        if clicked_category == st.session_state.clicked_category:
-            st.session_state.clicked_category = None
-        else:
-            st.session_state.clicked_category = clicked_category
-            st.session_state.clicked_segment = None
-            st.session_state.clicked_subcategory = None
-        st.rerun()
+st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
 # Group legend pills
 st.markdown(f"""
@@ -851,25 +747,23 @@ cols = st.columns(len(categories))
 for i, cat in enumerate(categories):
     color = category_colors.get(cat, '#4299e1')
     icon = '📦' if cat == 'Furniture' else '📎' if cat == 'Office Supplies' else '💻'
-    is_active = cat == st.session_state.clicked_category
-    border = '3px solid white' if is_active else 'none'
     with cols[i]:
         st.markdown(f"""
-        <div style="background:{color};border-radius:20px;padding:6px 0;text-align:center;margin-top:-15px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.2);border:{border};">
+        <div style="background:{color};border-radius:20px;padding:6px 0;text-align:center;margin-top:-15px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
             <span style="color:white;font-weight:600;font-size:0.85rem;">{icon} {cat}</span>
         </div>
         """, unsafe_allow_html=True)
 
 # Order count summary cards
 col1, col2, col3 = st.columns(3)
-for col, cat_name, icon in [(col1, 'Furniture', '📦'), (col2, 'Office Supplies', '📎'), (col3, 'Technology', '💻')]:
+for col, cat_name, icon in [(col1,'Furniture','📦'), (col2,'Office Supplies','📎'), (col3,'Technology','💻')]:
     a_row = ab_cat_a[ab_cat_a['Category'] == cat_name]
     b_row = ab_cat_b[ab_cat_b['Category'] == cat_name]
     a_orders = int(a_row['Order Count'].values[0]) if not a_row.empty else 0
     b_orders = int(b_row['Order Count'].values[0]) if not b_row.empty else 0
     with col:
         st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b);border:1px solid #2d4a6b;border-radius:10px;padding:12px;text-align:center;{'border:3px solid #48bb78' if cat_name == st.session_state.clicked_category else ''}">
+        <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b);border:1px solid #2d4a6b;border-radius:10px;padding:12px;text-align:center;">
             <div style="color:#63b3ed;font-size:0.75rem;text-transform:uppercase;margin-bottom:5px;">{icon} {cat_name} Orders</div>
             <div style="display:flex;justify-content:center;gap:25px;margin-top:5px;">
                 <div><span style="color:{group_a_color};font-weight:600;">🔵</span> <span style="color:white;">{a_orders}</span></div>
@@ -879,10 +773,10 @@ for col, cat_name, icon in [(col1, 'Furniture', '📦'), (col2, 'Office Supplies
         """, unsafe_allow_html=True)
 
 # ── Insight summary ───────────────────────────────────────────────────────────
-winner = val_a if sa["total"] > sb["total"] else val_b
+winner     = val_a if sa["total"] > sb["total"] else val_b
 winner_tot = max(sa["total"], sb["total"])
-loser_tot = min(sa["total"], sb["total"])
-gap_pct = abs(_delta(sa["total"], sb["total"]))
+loser_tot  = min(sa["total"], sb["total"])
+gap_pct    = abs(_delta(sa["total"], sb["total"]))
 
 st.markdown(f"""
 <div class="insight-card good">
@@ -905,159 +799,62 @@ st.header("📈 Sales Trends & Sub-Category Deep Dive")
 col3, col4 = st.columns(2)
 
 with col3:
-    st.subheader("Monthly Sales Trend (Click points to filter by month)")
+    st.subheader("Monthly Sales Trend")
     monthly_sales['label'] = monthly_sales['Sales'].apply(
         lambda v: f"${v/1000:.0f}K" if v >= 1000 else f"${v:.0f}"
     )
-    
-    fig_line = px.line(
-        monthly_sales, 
-        x='Month', 
-        y='Sales', 
-        markers=True,
-        text='label', 
-        labels={'Sales': 'Total Sales ($)', 'Month': ''},
-        custom_data=['Month']
-    )
-    
+    fig_line = px.line(monthly_sales, x='Month', y='Sales', markers=True,
+                       text='label', labels={'Sales':'Total Sales ($)','Month':''})
     fig_line.update_traces(
         line_color='#4299e1', line_width=2.5,
         marker=dict(size=7, color='#4299e1'),
         textposition='top center', textfont=dict(size=10, color='#90cdf4'),
-        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<br>Click to filter by month<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>"
     )
-    
     fig_line.update_layout(
         xaxis_tickangle=-45,
         yaxis=dict(tickprefix="$", tickformat=",.0f"),
-        yaxis_range=[0, monthly_sales['Sales'].max() * 1.18],
-        clickmode='event+select'
+        yaxis_range=[0, monthly_sales['Sales'].max() * 1.18]
     )
-    
-    line_click_data = st.plotly_chart(
-        fig_line, 
-        use_container_width=True, 
-        key="line_trend",
-        on_select="rerun",
-        selection_mode="points"
-    )
-    
-    if line_click_data and line_click_data.selection and line_click_data.selection.get("points"):
-        point = line_click_data.selection["points"][0]
-        clicked_month = point.get("x")
-        if clicked_month:
-            # You could add month filtering here if desired
-            st.info(f"Clicked on month: {clicked_month}")
-    
+    st.plotly_chart(fig_line, use_container_width=True, key="line_trend")
+
     if len(monthly_sales) >= 2:
         pct_chg = ((monthly_sales.iloc[-1]['Sales'] - monthly_sales.iloc[0]['Sales'])
                    / monthly_sales.iloc[0]['Sales'] * 100)
-        card_cls = "good" if pct_chg > 0 else "alert"
+        card_cls   = "good" if pct_chg > 0 else "alert"
         trend_word = "grown" if pct_chg > 0 else "declined"
-        advice = "Momentum is positive — consider scaling inventory." if pct_chg > 0 else "Investigate demand drivers and revisit pricing strategy."
+        advice     = "Momentum is positive — consider scaling inventory." if pct_chg > 0 else "Investigate demand drivers and revisit pricing strategy."
         st.markdown(f'<div class="insight-card {card_cls}"><div class="icon">📈</div><div class="label">Trend Insight</div><div class="value">{abs(pct_chg):.1f}% {"▲" if pct_chg > 0 else "▼"} over period</div><div class="detail">Sales have <strong>{trend_word} {abs(pct_chg):.1f}%</strong> from first to last month. {advice}</div></div>', unsafe_allow_html=True)
 
 with col4:
-    st.subheader("Sub-Category Sales Ranking (Click bars to filter)")
+    st.subheader("Sub-Category Sales Ranking")
     subcat_sorted = subcat_sales.sort_values('Sales', ascending=False)
-    
-    # Highlight clicked subcategory if any
-    bar_colors_sub = ['#2c7a4d'] * len(subcat_sorted)
-    if st.session_state.clicked_subcategory and st.session_state.clicked_subcategory in subcat_sorted['Sub-Category'].values:
-        bar_colors_sub = ['#e94560' if subcat == st.session_state.clicked_subcategory else '#2c7a4d' for subcat in subcat_sorted['Sub-Category']]
-    
-    fig_subcat = px.bar(
-        subcat_sorted, 
-        x='Sub-Category', 
-        y='Sales',
-        color='Sub-Category',
-        color_discrete_sequence=bar_colors_sub,
-        labels={'Sales': 'Total Sales ($)'},
-        custom_data=['Sub-Category']
-    )
-    
-    fig_subcat.update_traces(
-        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<br>Click to filter<extra></extra>",
-        showlegend=False
-    )
-    
-    fig_subcat.update_layout(
-        xaxis_tickangle=-45,
-        clickmode='event+select',
-        height=400
-    )
-    
-    subcat_click_data = st.plotly_chart(
-        fig_subcat, 
-        use_container_width=True, 
-        key="bar_subcat",
-        on_select="rerun",
-        selection_mode="points"
-    )
-    
-    if subcat_click_data and subcat_click_data.selection and subcat_click_data.selection.get("points"):
-        point = subcat_click_data.selection["points"][0]
-        clicked_subcat = point.get("x")
-        if clicked_subcat:
-            if clicked_subcat == st.session_state.clicked_subcategory:
-                st.session_state.clicked_subcategory = None
-            else:
-                st.session_state.clicked_subcategory = clicked_subcat
-                st.session_state.clicked_category = None
-                st.session_state.clicked_segment = None
-            st.rerun()
-    
-    if not subcat_sorted.empty:
-        bottom_subcat = subcat_sorted.iloc[-1]
-        st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement.</div></div>', unsafe_allow_html=True)
+    fig_subcat = px.bar(subcat_sorted, x='Sub-Category', y='Sales',
+                        color='Sales', color_continuous_scale='Teal', labels={'Sales':'Total Sales ($)'})
+    fig_subcat.update_traces(hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>")
+    fig_subcat.update_layout(xaxis_tickangle=-45, coloraxis_showscale=False)
+    st.plotly_chart(fig_subcat, use_container_width=True, key="bar_subcat")
+
+    bottom_subcat = subcat_sorted.iloc[-1]
+    st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement.</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ── REGION × SEGMENT ──────────────────────────────────────────────────────────
-st.header("🌎 Region vs. Segment Matrix (Click bars to filter)")
-fig_grouped = px.bar(
-    region_seg, 
-    x='Region', 
-    y='Sales', 
-    color='Segment',
-    barmode='group', 
-    color_discrete_sequence=px.colors.qualitative.Set2,
-    labels={'Sales': 'Total Sales ($)'},
-    custom_data=['Region', 'Segment']
-)
-
+st.header("🌎 Region vs. Segment Matrix")
+fig_grouped = px.bar(region_seg, x='Region', y='Sales', color='Segment',
+                     barmode='group', color_discrete_sequence=px.colors.qualitative.Set2,
+                     labels={'Sales':'Total Sales ($)'})
 fig_grouped.for_each_trace(
     lambda t: t.update(
-        hovertemplate=f"<b>%{{x}}</b><br>Segment: {t.name}<br>Sales: $%{{y:,.0f}}<br>Click to filter<extra></extra>"
+        hovertemplate=f"<b>%{{x}}</b><br>Segment: {t.name}<br>Sales: $%{{y:,.0f}}<extra></extra>"
     )
 )
+st.plotly_chart(fig_grouped, use_container_width=True, key="grouped_region_seg")
 
-fig_grouped.update_layout(
-    clickmode='event+select',
-    height=400
-)
-
-region_seg_click = st.plotly_chart(
-    fig_grouped, 
-    use_container_width=True, 
-    key="grouped_region_seg",
-    on_select="rerun",
-    selection_mode="points"
-)
-
-if region_seg_click and region_seg_click.selection and region_seg_click.selection.get("points"):
-    point = region_seg_click.selection["points"][0]
-    clicked_region = point.get("x")
-    clicked_segment = point.get("legendgroup")
-    
-    if clicked_region and clicked_segment:
-        # You can filter by region+segment combination here
-        st.info(f"Clicked on {clicked_region} - {clicked_segment}")
-
-if not region_seg.empty:
-    best_rs = region_seg.sort_values('Sales', ascending=False).iloc[0]
-    worst_rs = region_seg.sort_values('Sales').iloc[0]
-    st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}).</div></div>', unsafe_allow_html=True)
+best_rs  = region_seg.sort_values('Sales', ascending=False).iloc[0]
+worst_rs = region_seg.sort_values('Sales').iloc[0]
+st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}).</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -1067,19 +864,15 @@ st.header("🏙️ Top Cities by Sales")
 _city_mask = pd.Series([True] * len(df), index=df.index)
 if st.session_state.sel_region_card: _city_mask &= df['Region'].isin(st.session_state.sel_region_card)
 if sel_category: _city_mask &= df['Category'].isin(sel_category)
-if sel_segment: _city_mask &= df['Segment'].isin(sel_segment)
+if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
-if st.session_state.clicked_category: _city_mask &= df['Category'] == st.session_state.clicked_category
-if st.session_state.clicked_subcategory: _city_mask &= df['Sub-Category'] == st.session_state.clicked_subcategory
-if st.session_state.clicked_segment: _city_mask &= df['Segment'] == st.session_state.clicked_segment
-if st.session_state.clicked_region: _city_mask &= df['Region'] == st.session_state.clicked_region
 _city_base = df[_city_mask]
 
 _agg = _city_base.groupby(['City', 'State']).agg(
     **{
-        'Total Sales': ('Sales', 'sum'),
-        'Orders': ('Order ID', 'nunique'),
-        'Customers': ('Customer ID', 'nunique'),
+        'Total Sales': ('Sales',       'sum'),
+        'Orders':      ('Order ID',    'nunique'),
+        'Customers':   ('Customer ID', 'nunique'),
     }
 ).reset_index()
 _agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
@@ -1090,9 +883,9 @@ _agg = _agg[['State', 'City', 'Total Sales', 'Orders', 'Customers', 'Avg Order']
 st.dataframe(
     _agg.style.format({
         'Total Sales': '${:,.2f}',
-        'Avg Order': '${:,.2f}',
-        'Orders': '{:,}',
-        'Customers': '{:,}',
+        'Avg Order':   '${:,.2f}',
+        'Orders':      '{:,}',
+        'Customers':   '{:,}',
     }),
     use_container_width=True,
     height=420,
