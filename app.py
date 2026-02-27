@@ -610,22 +610,31 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED - HIDE CATEGORY LABELS) ──────────
+# ── Category breakdown side by side (FIXED HOVER) ──────────────────────────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
 
-# Add order count data for hover
+# Add order count data
 ab_cat_a_orders = grp_a.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
 ab_cat_b_orders = grp_b.groupby("Category")["Order ID"].nunique().reset_index().rename(columns={"Order ID": "Order Count"})
 
 # Merge sales and order data
 ab_cat_a = ab_cat_a_sales.merge(ab_cat_a_orders, on="Category", how="left")
 ab_cat_b = ab_cat_b_sales.merge(ab_cat_b_orders, on="Category", how="left")
-ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 
 # Fill any missing order counts with 0
-ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
+ab_cat_a["Order Count"] = ab_cat_a["Order Count"].fillna(0).astype(int)
+ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
+
+# Combine for plotting
+ab_cat = pd.concat([ab_cat_a, ab_cat_b])
+
+# Create lookup dictionaries for hover data
+cat_a_sales_dict = ab_cat_a.set_index('Category')['Sales'].to_dict()
+cat_a_orders_dict = ab_cat_a.set_index('Category')['Order Count'].to_dict()
+cat_b_sales_dict = ab_cat_b.set_index('Category')['Sales'].to_dict()
+cat_b_orders_dict = ab_cat_b.set_index('Category')['Order Count'].to_dict()
 
 fig_cat_ab = px.bar(
     ab_cat, 
@@ -637,16 +646,26 @@ fig_cat_ab = px.bar(
     labels={"Sales": "Total Sales ($)", "Group": ""},
 )
 
-# Custom hover template that shows both groups
+# Fix hover template for Group A bars
 fig_cat_ab.update_traces(
-    hovertemplate="<b>%{x}</b><br><br>" +
+    hovertemplate="<b>%{x}</b><br>" +
                   f"<span style='color:#4299e1'>🔵 {val_a}</span><br>" +
-                  "Sales: $" + f"{ab_cat_a.set_index('Category')['Sales'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
-                  "Orders: " + f"{ab_cat_a.set_index('Category')['Order Count'].to_dict().get('%{{x}}', 0):,.0f}<br><br>" +
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
+                  "<extra></extra>",
+    customdata=ab_cat_a[['Order Count']].values,
+    selector={"name": val_a}
+)
+
+# Fix hover template for Group B bars
+fig_cat_ab.update_traces(
+    hovertemplate="<b>%{x}</b><br>" +
                   f"<span style='color:#e94560'>🔴 {val_b}</span><br>" +
-                  "Sales: $" + f"{ab_cat_b.set_index('Category')['Sales'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
-                  "Orders: " + f"{ab_cat_b.set_index('Category')['Order Count'].to_dict().get('%{{x}}', 0):,.0f}<br>" +
-                  "<extra></extra>"
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
+                  "<extra></extra>",
+    customdata=ab_cat_b[['Order Count']].values,
+    selector={"name": val_b}
 )
 
 fig_cat_ab.update_layout(
@@ -675,7 +694,7 @@ fig_cat_ab.update_layout(
     ),
     margin=dict(l=10, r=10, t=40, b=30), 
     height=350,
-    hovermode="x unified",
+    hovermode="x",  # Changed from 'x unified' to 'x' for better individual bar hovering
     hoverlabel=dict(
         bgcolor="#1e3a5f",
         font_size=12,
@@ -686,6 +705,25 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
+# Add custom category labels below the chart
+categories = sorted(filtered_df['Category'].unique())
+category_icons = {
+    'Furniture': '📦',
+    'Office Supplies': '📎',
+    'Technology': '💻'
+}
+
+labels_html = '<div style="display:flex; justify-content:space-around; margin-top:-15px; margin-bottom:10px; padding:0 20px;">'
+for cat in categories:
+    icon = category_icons.get(cat, '📊')
+    labels_html += f'''
+    <div style="text-align:center; background:#0d1b2a; padding:5px 15px; border-radius:20px; border:1px solid #2d4a6b;">
+        <span style="color:#90cdf4; font-size:0.85rem;">{icon} {cat}</span>
+    </div>
+    '''
+labels_html += '</div>'
+
+st.markdown(labels_html, unsafe_allow_html=True)
 # Add custom category labels below the chart
 st.markdown(f"""
 <div style="display:flex; justify-content:space-around; margin-top:-15px; margin-bottom:10px; padding:0 20px;">
@@ -818,4 +856,5 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
