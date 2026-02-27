@@ -611,7 +611,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (FIXED - NO NAMES IN HOVER) ─────
+# ── Category breakdown side by side (COMPLETELY CUSTOM HOVER - NO CATEGORY NAMES) ─────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -641,24 +641,66 @@ fig_cat_ab = px.bar(
     labels={"Sales": "Total Sales ($)", "Group": ""},
 )
 
-# Completely override hover template - NO category name at all
+# Disable default hover and use custom hover
 fig_cat_ab.update_traces(
-    hovertemplate="<span style='color:#4299e1'>🔵 %{fullData.name}</span><br>" +
-                  "Sales: $%{y:,.0f}<br>" +
-                  "Orders: %{customdata[0]:,.0f}<br>" +
-                  "<extra></extra>",
-    customdata=ab_cat_a[['Order Count']].values,
+    hoverinfo="none",  # Disable all default hover info
+    hovertemplate=None,  # Remove default template
     selector={"name": val_a}
 )
 
 fig_cat_ab.update_traces(
-    hovertemplate="<span style='color:#e94560'>🔴 %{fullData.name}</span><br>" +
-                  "Sales: $%{y:,.0f}<br>" +
-                  "Orders: %{customdata[0]:,.0f}<br>" +
-                  "<extra></extra>",
-    customdata=ab_cat_b[['Order Count']].values,
+    hoverinfo="none",
+    hovertemplate=None,
     selector={"name": val_b}
 )
+
+# Add custom hover data using scatter traces (invisible points)
+for category in ab_cat_a['Category'].unique():
+    # Get data for this category
+    a_data = ab_cat_a[ab_cat_a['Category'] == category]
+    b_data = ab_cat_b[ab_cat_b['Category'] == category]
+    
+    if not a_data.empty:
+        a_sales = a_data['Sales'].values[0]
+        a_orders = a_data['Order Count'].values[0]
+        
+        # Add invisible scatter point for Group A hover
+        fig_cat_ab.add_trace(go.Scatter(
+            x=[category],
+            y=[a_sales],
+            mode='markers',
+            marker=dict(size=20, opacity=0),  # Invisible
+            hoverinfo='text',
+            hovertext=f"<span style='color:#4299e1'>🔵 {val_a}</span><br>Sales: ${a_sales:,.0f}<br>Orders: {a_orders}",
+            showlegend=False,
+            hoverlabel=dict(
+                bgcolor="#1e3a5f",
+                font_size=12,
+                font_color="white",
+                bordercolor="#4299e1"
+            )
+        ))
+    
+    if not b_data.empty:
+        b_sales = b_data['Sales'].values[0]
+        b_orders = b_data['Order Count'].values[0]
+        
+        # Add invisible scatter point for Group B hover
+        fig_cat_ab.add_trace(go.Scatter(
+            x=[category],
+            y=[b_sales],
+            mode='markers',
+            marker=dict(size=20, opacity=0),  # Invisible
+            hoverinfo='text',
+            hovertext=f"<span style='color:#e94560'>🔴 {val_b}</span><br>Sales: ${b_sales:,.0f}<br>Orders: {b_orders}",
+            showlegend=False,
+            hoverlabel=dict(
+                bgcolor="#1e3a5f",
+                font_size=12,
+                font_color="white",
+                bordercolor="#e94560"
+            )
+        ))
 
 fig_cat_ab.update_layout(
     title=dict(text="Category Breakdown — A vs B", font=dict(size=13), x=0.5),
@@ -685,18 +727,7 @@ fig_cat_ab.update_layout(
     margin=dict(l=10, r=10, t=40, b=50),  # Increased bottom margin for labels
     height=350,
     hovermode="x",  # Shows hover for individual bars
-    hoverlabel=dict(
-        bgcolor="#1e3a5f",
-        font_size=12,
-        font_color="white",
-        bordercolor="#4299e1"
-    ),
-    hoverdistance=100  # Control hover distance
 )
-
-# Remove any default hover information
-fig_cat_ab.update_xaxes(showspikes=False)  # Remove spike lines
-fig_cat_ab.update_yaxes(showspikes=False)
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
@@ -858,6 +889,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
