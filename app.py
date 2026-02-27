@@ -635,7 +635,8 @@ with col1:
     st.plotly_chart(fig_subcat_perf, use_container_width=True)
 
 with col2:
-    # Heatmap of Category vs Segment
+    # Category correlation heatmap (NEW)
+    # Create a pivot table of sales by Category and Segment
     cat_seg_pivot = filtered_df.pivot_table(
         values='Sales',
         index='Category',
@@ -644,24 +645,47 @@ with col2:
         fill_value=0
     )
     
-    fig_heatmap = go.Figure(data=go.Heatmap(
-        z=cat_seg_pivot.values,
-        x=cat_seg_pivot.columns,
-        y=cat_seg_pivot.index,
-        colorscale='Blues',
-        text=[[f"${v:,.2f}" for v in row] for row in cat_seg_pivot.values],
+    # Calculate correlation between categories across segments
+    category_corr = cat_seg_pivot.T.corr()
+    
+    # Create correlation heatmap
+    fig_corr = go.Figure(data=go.Heatmap(
+        z=category_corr.values,
+        x=category_corr.columns,
+        y=category_corr.index,
+        colorscale=[[0, '#0d1b2a'], [0.25, '#1e3a5f'], [0.5, '#2b6cb0'], [0.75, '#4299e1'], [1, '#90cdf4']],
+        zmin=-1,
+        zmax=1,
+        text=[[f"{v:.3f}" for v in row] for row in category_corr.values],
         texttemplate='%{text}',
-        textfont=dict(size=10, color='white'),
-        hovertemplate='<b>%{y}</b> × <b>%{x}</b><br>Sales: $%{z:,.2f}<extra></extra>'
+        textfont=dict(size=12, color='white'),
+        hovertemplate='<b>%{y}</b> × <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>'
     ))
     
-    fig_heatmap.update_layout(
-        title='Sales Matrix: Category × Segment',
+    fig_corr.update_layout(
+        title='Category Correlation Matrix<br><sup>How sales patterns correlate across categories</sup>',
         height=500,
         xaxis_title='',
-        yaxis_title=''
+        yaxis_title='',
+        xaxis=dict(tickangle=45)
     )
-    st.plotly_chart(fig_heatmap, use_container_width=True)
+    st.plotly_chart(fig_corr, use_container_width=True)
+
+# Add interpretation for correlation heatmap
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("""
+    <div class="insight-card" style="margin-top: 10px;">
+        <div class="insight-icon">📊</div>
+        <div class="insight-label">Correlation Interpretation</div>
+        <div class="insight-detail">
+            <strong>1.0</strong> = Perfect positive correlation (sales patterns move together)<br>
+            <strong>0.0</strong> = No correlation<br>
+            <strong>-1.0</strong> = Perfect negative correlation (inverse relationship)<br>
+            Higher values suggest categories that perform similarly across customer segments.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
