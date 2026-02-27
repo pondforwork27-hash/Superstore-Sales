@@ -703,30 +703,51 @@ for category in ab_cat_a['Category'].unique():
         ))
 
 fig_cat_ab.update_layout(
-    title=dict(text="Category Breakdown — A vs B", font=dict(size=13), x=0.5),
+    title=dict(
+        text="Category Breakdown — A vs B", 
+        font=dict(size=13, color="#63b3ed"),  # Match filter-title color
+        x=0.5
+    ),
     legend=dict(
         orientation="h", 
         yanchor="bottom", 
         y=-0.25, 
         xanchor="center", 
         x=0.5,
+        font=dict(color="#90cdf4"),  # Match pill text color
+        bgcolor="rgba(0,0,0,0)"
     ),
     plot_bgcolor="rgba(0,0,0,0)", 
     paper_bgcolor="rgba(0,0,0,0)",
     yaxis=dict(
         tickprefix="$", 
         tickformat=",.0f",
-        gridcolor='rgba(128,128,128,0.2)'
+        gridcolor='rgba(128,128,128,0.2)',
+        title=dict(text="Sales ($)", font=dict(color="#90cdf4")),  # Match pill text color
+        tickfont=dict(color="#90cdf4")  # Match pill text color
     ),
-    # SHOW THE X-AXIS CATEGORY LABELS
+    # SHOW THE X-AXIS CATEGORY LABELS WITH UPDATED COLORS
     xaxis=dict(
         title="",  # Remove title
         tickangle=0,  # Keep labels straight
-        tickfont=dict(size=11, color="#90cdf4")  # Style the labels
+        tickfont=dict(
+            size=11, 
+            color="#63b3ed",  # Match filter-title color (light blue)
+            weight=600  # Make them slightly bold like the filter-title
+        ),
+        linecolor="#2d4a6b",  # Match border color from pills
+        linewidth=1,
+        showline=True
     ),
     margin=dict(l=10, r=10, t=40, b=50),  # Increased bottom margin for labels
     height=350,
     hovermode="x",  # Shows hover for individual bars
+)
+
+# Update y-axis grid lines to match theme
+fig_cat_ab.update_yaxes(
+    gridcolor='rgba(45, 74, 107, 0.3)',  # Match border color with opacity
+    griddash='dot'
 )
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
@@ -738,11 +759,11 @@ with col1:
     furniture_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_a['Category'].values else 0
     furniture_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Furniture']['Order Count'].values[0] if 'Furniture' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
-        <div style="color:#90cdf4; font-size:0.8rem;">📦 Furniture Orders</div>
-        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
-            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{furniture_orders_a}</span></div>
-            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{furniture_orders_b}</span></div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">📦 Furniture Orders</div>
+        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
+            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{furniture_orders_a}</span></div>
+            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{furniture_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -751,11 +772,11 @@ with col2:
     office_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_a['Category'].values else 0
     office_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Office Supplies']['Order Count'].values[0] if 'Office Supplies' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
-        <div style="color:#90cdf4; font-size:0.8rem;">📎 Office Supplies Orders</div>
-        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
-            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{office_orders_a}</span></div>
-            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{office_orders_b}</span></div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">📎 Office Supplies Orders</div>
+        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
+            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{office_orders_a}</span></div>
+            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{office_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -764,11 +785,11 @@ with col3:
     tech_orders_a = ab_cat_a[ab_cat_a['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_a['Category'].values else 0
     tech_orders_b = ab_cat_b[ab_cat_b['Category'] == 'Technology']['Order Count'].values[0] if 'Technology' in ab_cat_b['Category'].values else 0
     st.markdown(f"""
-    <div style="background:#0d1b2a; border:1px solid #2d4a6b; border-radius:10px; padding:10px; text-align:center;">
-        <div style="color:#90cdf4; font-size:0.8rem;">💻 Technology Orders</div>
-        <div style="display:flex; justify-content:center; gap:20px; margin-top:5px;">
-            <div><span style="color:#4299e1;">🔵</span> <span style="color:white;">{tech_orders_a}</span></div>
-            <div><span style="color:#e94560;">🔴</span> <span style="color:white;">{tech_orders_b}</span></div>
+    <div style="background:linear-gradient(135deg,#0d1b2a,#1b2a3b); border:1px solid #2d4a6b; border-radius:10px; padding:12px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+        <div style="color:#63b3ed; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">💻 Technology Orders</div>
+        <div style="display:flex; justify-content:center; gap:25px; margin-top:5px;">
+            <div><span style="color:#4299e1; font-weight:600;">🔵</span> <span style="color:white; font-weight:500;">{tech_orders_a}</span></div>
+            <div><span style="color:#e94560; font-weight:600;">🔴</span> <span style="color:white; font-weight:500;">{tech_orders_b}</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -889,6 +910,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
