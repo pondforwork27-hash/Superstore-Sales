@@ -297,18 +297,36 @@ _region_meta = {
 }
 
 # ── Per-card CSS: the entire st.button IS the card ────────────────────────
-# ── Region card CSS: overlay transparent button on top of HTML card ──────
+# ── Region card CSS: use :has() to overlay button over sibling card ───────
 st.markdown("""<style>
-.rcard-wrap { position: relative; margin-bottom: 8px; }
-.rcard-wrap button {
+/* Make the column vertical block position:relative when it contains a card */
+[data-testid="stVerticalBlock"]:has(.rcard-wrap) {
+    position: relative !important;
+}
+/* Position the stButton container absolutely to cover the whole column */
+[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="stButton"],
+[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="stBaseButton-secondaryFormSubmit"],
+[data-testid="stVerticalBlock"]:has(.rcard-wrap) [data-testid="element-container"] {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 100 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+/* Make the actual button element fill the overlay */
+[data-testid="stVerticalBlock"]:has(.rcard-wrap) button {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
     opacity: 0 !important;
     cursor: pointer !important;
-    z-index: 10 !important;
+    z-index: 100 !important;
     border-radius: 20px !important;
+    background: transparent !important;
+    border: none !important;
 }
 </style>""", unsafe_allow_html=True)
 
