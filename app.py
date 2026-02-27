@@ -11,63 +11,18 @@ st.set_page_config(
 )
 
 # ── CSS ─────────────────────────────────────────────────────────────────────
-# --- แก้ไข CSS เพื่อจัดการเรื่องการซ้อนทับ (Overlap) ---
 st.markdown("""
 <style>
-    /* บังคับระยะห่างระหว่าง Filter กับเนื้อหา (แก้ปัญหาการบังกัน) */
-    #filter-spacer { 
-        height: 160px !important; /* ปรับค่านี้ตามความสูงของ Filter คุณ */
-        display: block; 
-    }
-    
-    /* ปรับแต่งความกว้างของตารางและ Column */
-    [data-testid="stDataFrame"] {
-        width: 100%;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- ส่วนตารางเมือง (City Performance) ---
-st.header("🏙️ Performance by City")
-
-# เตรียมข้อมูล
-city_stats = filtered_df.groupby('City')['Sales'].sum().reset_index()
-city_stats = city_stats.sort_values('Sales', ascending=False).reset_index(drop=True)
-
-# ใส่ Rank
-city_stats.index += 1
-city_stats.insert(0, 'Rank', city_stats.index)
-
-# แสดงตารางพร้อมตั้งค่า Column (Rank แคบ / Sales มี $)
-st.dataframe(
-    city_stats,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Rank": st.column_config.NumberColumn("Rank", width="small"),
-        "City": st.column_config.TextColumn("City Name"),
-        "Sales": st.column_config.NumberColumn("Total Sales", format="$%,.2f")
-    }
-)
-
-st.markdown("---")
-
-# --- ซ่อมส่วนสุดท้ายที่ขาดไป (Region vs Segment) ---
-st.header("🌎 Region vs. Segment Matrix")
-region_seg = filtered_df.groupby(['Region','Segment'])['Sales'].sum().reset_index()
-
-fig_grouped = px.bar(region_seg, x='Region', y='Sales', color='Segment',
-                     barmode='group', color_discrete_sequence=px.colors.qualitative.Set2,
-                     labels={'Sales':'Total Sales ($)'})
-
-fig_grouped.update_traces(hovertemplate="<b>%{x}</b><br>Segment: %{fullData.name}<br>Sales: $%{y:,.0f}<extra></extra>")
-
-st.plotly_chart(fig_grouped, use_container_width=True, key="grouped_region_seg")
-
-# สรุป Insight สั้นๆ ท้ายตาราง
-if not region_seg.empty:
-    best_rs = region_seg.sort_values('Sales', ascending=False).iloc[0]
-    st.info(f"💡 **Note:** กลุ่มลูกค้า **{best_rs['Segment']}** ในภูมิภาค **{best_rs['Region']}** มียอดขายรวมสูงสุดในปัจจุบัน")
+#filter-spacer { display: block; }
+.filter-bar {
+    background: linear-gradient(135deg, #3a6f8f 0%, #4a85a8 50%, #5a9abf 100%);
+    border: 1px solid #7ab3d0;
+    border-bottom: 1px solid rgba(180,220,255,0.3);
+    border-radius: 0 0 14px 14px;
+    padding: 12px 20px 10px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden;
+}
 /* ── Filter label and input text colors ── */
 .filter-bar label { color: #ffffff !important; font-size: 0.75rem !important; font-weight: 600 !important; }
 .filter-bar [data-baseweb="select"] input { color: #ffffff !important; }
