@@ -574,7 +574,7 @@ fig_ab.update_layout(
 )
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
-# ── Category breakdown side by side (COMPLETELY HIDE CATEGORY TEXT) ────────
+# ── Category breakdown side by side (FIXED HOVER ISSUE) ──────────────────────────
 # Calculate both sales and order counts for each category
 ab_cat_a_sales = grp_a.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_a)
 ab_cat_b_sales = grp_b.groupby("Category")["Sales"].sum().reset_index().assign(Group=val_b)
@@ -592,21 +592,18 @@ ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 ab_cat["Order Count"] = ab_cat["Order Count"].fillna(0).astype(int)
 
 fig_cat_ab = px.bar(
-    ab_cat, 
-    x="Category", 
-    y="Sales", 
-    color="Group", 
-    barmode="group",
+    ab_cat, x="Category", y="Sales", color="Group", barmode="group",
     color_discrete_map={val_a: "#4299e1", val_b: "#e94560"},
     labels={"Sales": "Total Sales ($)", "Group": ""},
+    custom_data=["Order Count", "Group"]  # Add custom data for hover
 )
 
-# Custom hover template
+# Custom hover template that shows both sales and order count
 fig_cat_ab.update_traces(
     hovertemplate="<b>%{x}</b><br>" +
-                  f"<span style='color:#4299e1'>🔵 {val_a}</span>: $%{{y:,.0f}}<br>" +
-                  f"<span style='color:#e94560'>🔴 {val_b}</span>: $" + 
-                  f"{ab_cat_b[ab_cat_b['Category'] == '%{{x}}']['Sales'].values[0] if len(ab_cat_b[ab_cat_b['Category'] == '%{{x}}']) > 0 else 0:,.0f}<br>" +
+                  "Group: %{customdata[1]}<br>" +
+                  "Sales: $%{y:,.0f}<br>" +
+                  "Orders: %{customdata[0]:,.0f}<br>" +
                   "<extra></extra>"
 )
 
@@ -615,17 +612,12 @@ fig_cat_ab.update_layout(
     legend=dict(
         orientation="h", 
         yanchor="bottom", 
-        y=-0.15, 
+        y=-0.3, 
         xanchor="center", 
         x=0.5,
-    ),
-    plot_bgcolor="rgba(0,0,0,0)", 
-    paper_bgcolor="rgba(0,0,0,0)",
-    yaxis=dict(
-        tickprefix="$", 
-        tickformat=",.0f",
-        gridcolor='rgba(128,128,128,0.2)'
-    ),
+        itemclick=False,  # Disable legend clicking that might interfere
+        itemdoubleclick=False
+    ), 
     # COMPLETELY HIDE X-AXIS
     xaxis=dict(
         showticklabels=False,    # Hide tick labels
@@ -634,18 +626,15 @@ fig_cat_ab.update_layout(
         showline=False,          # Hide axis line
         title=""                 # Remove title
     ),
-    margin=dict(l=10, r=10, t=40, b=20), 
+    plot_bgcolor="rgba(0,0,0,0)", 
+    paper_bgcolor="rgba(0,0,0,0)",
+    yaxis=dict(tickprefix="$", tickformat=",.0f"),
+    margin=dict(l=10, r=10, t=40, b=10), 
     height=300,
-    hovermode="x unified",
-    hoverlabel=dict(
-        bgcolor="#1e3a5f",
-        font_size=12,
-        font_color="white",
-        bordercolor="#4299e1"
-    )
+    hovermode='x unified'  # This makes hover show both groups at the same x position
 )
-
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
+
 # ── Insight summary ───────────────────────────────────────────────────────────
 winner     = val_a if sa["total"] > sb["total"] else val_b
 winner_tot = max(sa["total"], sb["total"])
@@ -759,4 +748,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
