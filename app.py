@@ -565,11 +565,5 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── TOP 10 CITIES + RAW DATA ──────────────────────────────────────────────────
-st.header("🏙️ Top 10 Cities by Revenue")
-top_cities = city_sales.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
-top_cities.index += 1
-st.dataframe(
-    top_cities.style.format({'Sales': '${:,.0f}'}),
-    use_container_width=True
-)
+
+
