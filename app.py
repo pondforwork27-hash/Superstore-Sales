@@ -568,11 +568,11 @@ with col1:
         orientation='h',
         title='Top 10 Customers by Sales',
         color='Total Sales',
-        color_continuous_scale='Blues',
-        hover_data={'Order Count': True, 'Total Sales': ':,.2f'}
+        color_continuous_scale='Blues'
     )
     fig_customers.update_traces(
-        hovertemplate='<b>%{y}</b><br>Total Sales: $%{x:,.2f}<br>Orders: %{customdata[0]:,}<extra></extra>'
+        hovertemplate='<b>%{y}</b><br>Total Sales: $%{x:,.2f}<br>Orders: %{customdata[0]:,}<extra></extra>',
+        customdata=customer_sales[['Order Count']]
     )
     fig_customers.update_layout(
         yaxis={'categoryorder': 'total ascending'},
@@ -618,7 +618,7 @@ st.header("📦 Product Analysis")
 col1, col2 = st.columns(2)
 
 with col1:
-    # FIXED: Product sub-category performance scatter plot
+    # FIXED: Product sub-category performance scatter plot with correct hover
     subcat_stats = filtered_df.groupby('Sub-Category').agg({
         'Sales': 'sum',
         'Order ID': 'nunique'
@@ -626,15 +626,7 @@ with col1:
     subcat_stats['Avg Order Value'] = subcat_stats['Sales'] / subcat_stats['Order ID']
     subcat_stats = subcat_stats.sort_values('Sales', ascending=False).head(15)
     
-    # Create a custom hover text
-    subcat_stats['hover_text'] = subcat_stats.apply(
-        lambda row: f"<b>{row['Sub-Category']}</b><br>" +
-                   f"Sales: ${row['Sales']:,.2f}<br>" +
-                   f"Orders: {row['Order ID']:,.0f}<br>" +
-                   f"Avg Order: ${row['Avg Order Value']:,.2f}",
-        axis=1
-    )
-    
+    # Create a simple scatter plot with correct hover
     fig_subcat_perf = px.scatter(
         subcat_stats,
         x='Order ID',
@@ -642,23 +634,29 @@ with col1:
         size='Avg Order Value',
         color='Sub-Category',
         title='Sub-Category Performance (Top 15)',
-        hover_name='Sub-Category',  # This will show the sub-category name
+        hover_name='Sub-Category',
         hover_data={
             'Sales': ':,.2f',
             'Order ID': ':,.0f',
             'Avg Order Value': ':,.2f',
-            'Sub-Category': False  # Hide duplicate
-        }
+            'Sub-Category': False
+        },
+        size_max=30
     )
+    
     fig_subcat_perf.update_traces(
-        marker=dict(line=dict(width=1, color='white')),
-        hovertemplate='<b>%{hovertext}</b><br>Sales: $%{customdata[0]:,.2f}<br>Orders: %{customdata[1]:,.0f}<br>Avg Order: $%{customdata[2]:,.2f}<extra></extra>',
-        customdata=subcat_stats[['Sales', 'Order ID', 'Avg Order Value']]
+        marker=dict(line=dict(width=1, color='white'))
     )
+    
     fig_subcat_perf.update_layout(
         height=500,
         xaxis_title='Number of Orders',
-        yaxis_title='Total Sales ($)'
+        yaxis_title='Total Sales ($)',
+        hoverlabel=dict(
+            bgcolor='#0d1b2a',
+            font_size=12,
+            font_color='white'
+        )
     )
     st.plotly_chart(fig_subcat_perf, use_container_width=True)
 
@@ -749,11 +747,11 @@ with col1:
         y='Sales',
         title='Sales by Region',
         color='Sales',
-        color_continuous_scale='Blues',
-        hover_data={'Order ID': ':,.0f', 'Customer ID': ':,.0f', 'Sales': ':,.2f'}
+        color_continuous_scale='Blues'
     )
     fig_region.update_traces(
-        hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.2f}<br>Orders: %{customdata[0]:,.0f}<br>Customers: %{customdata[1]:,.0f}<extra></extra>'
+        hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.2f}<br>Orders: %{customdata[0]:,.0f}<br>Customers: %{customdata[1]:,.0f}<extra></extra>',
+        customdata=region_stats[['Order ID', 'Customer ID']]
     )
     fig_region.update_layout(
         xaxis_title='',
