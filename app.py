@@ -196,34 +196,29 @@ st.caption("Select filters to update all charts instantly. Click a state on the 
 # ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
 st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
 
-region_opts   = sorted(df['Region'].unique().tolist())
 category_opts = sorted(df['Category'].unique().tolist())
 segment_opts  = sorted(df['Segment'].unique().tolist())
 year_opts     = sorted(df['Year'].unique().tolist())
 
-fc1, fc2, fc3, fc4 = st.columns(4)
+fc1, fc2, fc3 = st.columns(3)
 with fc1:
-    sel_region = st.multiselect("Region", region_opts, default=[v for v in st.session_state.sel_region if v in region_opts], placeholder="All regions", key='_w_region')
-with fc2:
     sel_category = st.multiselect("Category", category_opts, default=[v for v in st.session_state.sel_category if v in category_opts], placeholder="All categories", key='_w_category')
-with fc3:
+with fc2:
     sel_segment = st.multiselect("Segment", segment_opts, default=[v for v in st.session_state.sel_segment if v in segment_opts], placeholder="All segments", key='_w_segment')
-with fc4:
+with fc3:
     sel_year = st.multiselect("Year", year_opts, default=[v for v in st.session_state.sel_year if v in year_opts], placeholder="All years", key='_w_year')
 
-st.session_state.sel_region   = list(sel_region)
 st.session_state.sel_category = list(sel_category)
 st.session_state.sel_segment  = list(sel_segment)
 st.session_state.sel_year     = list(sel_year)
 
 pills_html = '<div class="active-pills">'
 cs = st.session_state.clicked_state
-for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
 for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
 for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
 for v in sel_year:     pills_html += f'<div class="pill">📅 {v}</div>'
 if cs:                  pills_html += f'<div class="pill state">📍 {cs}</div>'
-if not sel_region and not sel_category and not sel_segment and not sel_year and not cs:
+if not sel_category and not sel_segment and not sel_year and not cs and not st.session_state.sel_region_card:
     pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
 pills_html += '</div>'
 st.markdown(pills_html, unsafe_allow_html=True)
@@ -240,6 +235,8 @@ if st.session_state.clicked_state:
 
 # ── BUILD filtered_df ───────────────────────────────────────────────────────
 mask = pd.Series([True] * len(df), index=df.index)
+_active_regions = list(st.session_state.sel_region_card)
+if _active_regions: mask &= df['Region'].isin(_active_regions)
 if sel_category: mask &= df['Category'].isin(sel_category)
 if sel_segment:  mask &= df['Segment'].isin(sel_segment)
 if sel_year:     mask &= df['Year'].isin(sel_year)
@@ -794,7 +791,7 @@ st.markdown("---")
 st.header("🏙️ Top Cities by Sales")
 
 _city_mask = pd.Series([True] * len(df), index=df.index)
-if sel_region:   _city_mask &= df['Region'].isin(sel_region)
+if st.session_state.sel_region_card: _city_mask &= df['Region'].isin(st.session_state.sel_region_card)
 if sel_category: _city_mask &= df['Category'].isin(sel_category)
 if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
 if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
@@ -822,4 +819,3 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
-
