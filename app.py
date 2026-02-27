@@ -631,9 +631,10 @@ ab_cat_b["Order Count"] = ab_cat_b["Order Count"].fillna(0).astype(int)
 # Combine for plotting
 ab_cat = pd.concat([ab_cat_a, ab_cat_b])
 
-# Define colors for the bars - matching photo 2 style
-group_a_color = "#FF6B6B"  # Coral red for Central
-group_b_color = "#4ECDC4"   # Turquoise for Corporate
+# Use the SAME colors for bars and backgrounds
+# These match the screenshot colors
+group_a_color = "#4299e1"  # Blue for Central
+group_b_color = "#e94560"   # Red for Corporate
 
 fig_cat_ab = px.bar(
     ab_cat, 
@@ -703,7 +704,6 @@ for category in ab_cat_a['Category'].unique():
             )
         ))
 
-# Create custom legend with colored backgrounds (like photo 2)
 fig_cat_ab.update_layout(
     title=dict(
         text="Category Breakdown — A vs B", 
@@ -735,13 +735,13 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Add custom legend with colored backgrounds (like photo 2)
+# Add custom legend with colored backgrounds that MATCH THE BAR COLORS
 st.markdown(f"""
 <div style="display:flex; justify-content:center; gap:20px; margin-bottom:15px;">
-    <div style="display:flex; align-items:center; gap:8px; background:{group_a_color}; padding:5px 15px; border-radius:20px;">
+    <div style="display:flex; align-items:center; gap:8px; background:{group_a_color}; padding:5px 15px; border-radius:20px; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
         <span style="color:white; font-weight:600;">🔵 {val_a}</span>
     </div>
-    <div style="display:flex; align-items:center; gap:8px; background:{group_b_color}; padding:5px 15px; border-radius:20px;">
+    <div style="display:flex; align-items:center; gap:8px; background:{group_b_color}; padding:5px 15px; border-radius:20px; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
         <span style="color:white; font-weight:600;">🔴 {val_b}</span>
     </div>
 </div>
@@ -750,9 +750,9 @@ st.markdown(f"""
 # Add custom category labels with colored backgrounds
 categories = sorted(filtered_df['Category'].unique())
 category_colors = {
-    'Furniture': '#FFA07A',  # Light Salmon
-    'Office Supplies': '#98D8C8',  # Mint
-    'Technology': '#D4A5A5'  # Dusty Rose
+    'Furniture': '#48bb78',  # Green
+    'Office Supplies': '#f39c12',  # Orange
+    'Technology': '#9b59b6'  # Purple
 }
 
 cols = st.columns(len(categories))
@@ -935,6 +935,7 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
 
 
 
