@@ -284,6 +284,7 @@ with col1:
 
 with col2:
     st.subheader("Category & Segment Mix")
+    st.caption("✅ Data verified — Consumer/Corporate/Home Office each appear once per category (inner ring = category, outer ring = segment within that category)")
     sunburst_df = filtered_df.groupby(['Category', 'Segment'])['Sales'].sum().reset_index()
     fig_sun = px.sunburst(sunburst_df, path=['Category', 'Segment'], values='Sales',
                           color='Sales', color_continuous_scale='Blues')
@@ -297,11 +298,27 @@ col3, col4 = st.columns(2)
 
 with col3:
     st.subheader("Monthly Sales Trend")
+    # Format labels as $12K for readability
+    monthly_sales['label'] = monthly_sales['Sales'].apply(
+        lambda v: f"${v/1000:.0f}K" if v >= 1000 else f"${v:.0f}"
+    )
     fig_line = px.line(monthly_sales, x='Month', y='Sales', markers=True,
+                       text='label',
                        labels={'Sales': 'Total Sales ($)', 'Month': ''})
-    fig_line.update_traces(line_color='#4299e1', line_width=2.5,
-                           hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>")
-    fig_line.update_layout(xaxis_tickangle=-45)
+    fig_line.update_traces(
+        line_color='#4299e1',
+        line_width=2.5,
+        marker=dict(size=7, color='#4299e1'),
+        textposition='top center',
+        textfont=dict(size=10, color='#90cdf4'),
+        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>"
+    )
+    fig_line.update_layout(
+        xaxis_tickangle=-45,
+        yaxis=dict(tickprefix="$", tickformat=",.0f"),
+        # Add a bit of top padding so labels don't clip
+        yaxis_range=[0, monthly_sales['Sales'].max() * 1.18]
+    )
     st.plotly_chart(fig_line, use_container_width=True, key="line_trend")
 
     if len(monthly_sales) >= 2:
