@@ -10,152 +10,140 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+# ── CSS ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* ── Sticky filter wrapper ───────────────────────────────────────── */
-.sticky-filter-wrap {
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    /* pull it flush to the Streamlit page edges */
-    margin-left:  -1rem;
-    margin-right: -1rem;
-    padding: 0 1rem;
-    /* glass-like backdrop so charts don't bleed through */
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    background: rgba(10, 18, 30, 0.82);
-    border-bottom: 1px solid rgba(66, 153, 225, 0.18);
-    padding-bottom: 4px;
-}
-/* ── Filter card inside ─────────────────────────────────────────── */
+#filter-spacer { display: block; }
 .filter-bar {
     background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 40%, #1e3a5f 100%);
     border: 1px solid #2d4a6b;
-    border-radius: 0 0 12px 12px;
-    padding: 14px 20px 12px 20px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
-    position: relative;
-    overflow: hidden;
+    border-bottom: 1px solid rgba(66,153,225,0.25);
+    border-radius: 0 0 14px 14px;
+    padding: 12px 20px 10px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.55);
+    position: relative; overflow: hidden;
 }
 .filter-bar::before {
     content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    position: absolute; top:0; left:0; right:0; bottom:0;
     background:
         radial-gradient(circle at 15% 60%, rgba(66,153,225,0.07) 0%, transparent 55%),
         radial-gradient(circle at 85% 20%, rgba(99,179,237,0.05) 0%, transparent 45%);
     pointer-events: none;
 }
 .filter-title {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #63b3ed;
-    text-transform: uppercase;
-    letter-spacing: 0.13em;
-    margin-bottom: 8px;
+    font-size: 0.68rem; font-weight: 700; color: #63b3ed;
+    text-transform: uppercase; letter-spacing: 0.13em; margin-bottom: 8px;
 }
-/* pending badge shown when filters differ from applied */
 .pending-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(237,137,54,0.15);
-    border: 1px solid #ed8936;
-    border-radius: 16px;
-    padding: 3px 10px;
-    font-size: 0.74rem;
-    color: #fbd38d;
-    margin-left: 8px;
-    vertical-align: middle;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(237,137,54,0.15); border: 1px solid #ed8936;
+    border-radius: 16px; padding: 3px 10px;
+    font-size: 0.74rem; color: #fbd38d; margin-left: 8px; vertical-align: middle;
 }
-/* active filter pills */
-.active-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 6px;
-    margin-bottom: 2px;
-}
+.active-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:2px; }
 .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(30,58,95,0.9);
-    border: 1px solid #2d5a8a;
-    border-radius: 16px;
-    padding: 3px 10px;
-    font-size: 0.73rem;
-    color: #90cdf4;
+    display:inline-flex; align-items:center; gap:5px;
+    background:rgba(30,58,95,0.9); border:1px solid #2d5a8a;
+    border-radius:16px; padding:3px 10px; font-size:0.73rem; color:#90cdf4;
 }
-.pill.state { border-color: #e94560; color: #feb2b2; }
-/* ── State click badge ──────────────────────────────────────────── */
+.pill.state { border-color:#e94560; color:#feb2b2; }
 .state-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: linear-gradient(90deg,#1e3a5f,#2d5a8a);
-    border: 1px solid #4299e1;
-    border-radius: 20px;
-    padding: 5px 14px;
-    font-size: 0.8rem;
-    color: #90cdf4;
-    margin-bottom: 10px;
+    display:inline-flex; align-items:center; gap:8px;
+    background:linear-gradient(90deg,#1e3a5f,#2d5a8a);
+    border:1px solid #4299e1; border-radius:20px;
+    padding:5px 14px; font-size:0.8rem; color:#90cdf4; margin-bottom:10px;
 }
 .state-badge strong { color:#fff; }
-/* ── Insight cards ─────────────────────────────────────────────── */
 .insight-card {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
-    border-left: 4px solid #4299e1;
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-bottom: 10px;
-    color: #f0f0f0;
+    background:linear-gradient(135deg,#0d1b2a 0%,#1b2a3b 100%);
+    border-left:4px solid #4299e1; border-radius:8px;
+    padding:14px 18px; margin-bottom:10px; color:#f0f0f0;
 }
-.insight-card.warn  { border-left-color: #ed8936; }
-.insight-card.good  { border-left-color: #48bb78; }
-.insight-card.alert { border-left-color: #e94560; }
-.insight-card .icon { font-size: 1.3rem; }
+.insight-card.warn  { border-left-color:#ed8936; }
+.insight-card.good  { border-left-color:#48bb78; }
+.insight-card.alert { border-left-color:#e94560; }
+.insight-card .icon { font-size:1.3rem; }
 .insight-card .label {
-    font-size: 0.7rem; color: #a0aec0;
-    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px;
+    font-size:0.7rem; color:#a0aec0;
+    text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px;
 }
-.insight-card .value { font-size: 1.35rem; font-weight: 700; color: #fff; }
-.insight-card .detail { font-size: 0.82rem; color: #90cdf4; margin-top: 3px; line-height: 1.5; }
+.insight-card .value { font-size:1.35rem; font-weight:700; color:#fff; }
+.insight-card .detail { font-size:0.82rem; color:#90cdf4; margin-top:3px; line-height:1.5; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── JS: make the sticky-filter-wrap actually sticky inside Streamlit ──────────
-# Streamlit wraps everything in block containers; we hoist the filter section
-# up to the app-level so `position:sticky; top:0` works correctly.
-st.markdown("""
+# ── Sentinel + JS: true fixed-position filter ─────────────────────────────────
+# We mark the filter with an id, walk the Streamlit DOM tree to its containing
+# stVerticalBlock, set position:fixed + top:0, and insert an equal-height
+# spacer so the content underneath doesn't jump.
+st.markdown('<span id="filter-sentinel"></span>', unsafe_allow_html=True)
+
+import streamlit.components.v1 as _stc
+_stc.html("""
 <script>
-(function() {
-  function stickyInit() {
-    var wrap = document.querySelector('.sticky-filter-wrap');
-    if (!wrap) return;
-    // walk up until we find the stVerticalBlock direct child of the app view
-    var el = wrap;
-    for (var i = 0; i < 8; i++) {
-      if (!el.parentElement) break;
-      el = el.parentElement;
-      if (el.classList.contains('stVerticalBlock')) {
-        el.style.position = 'sticky';
-        el.style.top      = '0';
-        el.style.zIndex   = '999';
-        break;
+(function () {
+  var DONE = false;
+
+  function fixFilter() {
+    if (DONE) return;
+    var sentinel = document.getElementById('filter-sentinel');
+    if (!sentinel) return;
+
+    // Walk up the DOM to find the stVerticalBlock that wraps our filter widgets
+    var block = sentinel;
+    var found = false;
+    for (var i = 0; i < 12; i++) {
+      if (!block.parentElement) return;
+      block = block.parentElement;
+      if (block.getAttribute('data-testid') === 'stVerticalBlock') {
+        // Make sure this block actually contains the filter-bar div
+        if (block.querySelector('.filter-bar')) { found = true; break; }
       }
     }
+    if (!found) return;
+
+    // Prevent double-execution across re-renders
+    if (block.getAttribute('data-filter-fixed') === '1') return;
+    block.setAttribute('data-filter-fixed', '1');
+    DONE = true;
+
+    // Insert spacer before the block so content doesn't jump up
+    var spacer = document.createElement('div');
+    spacer.id = 'filter-spacer';
+    block.parentNode.insertBefore(spacer, block);
+
+    function applyFixed() {
+      var h = block.scrollHeight;
+      spacer.style.height = h + 'px';
+
+      // Detect left offset from Streamlit's layout padding
+      var parentRect = block.parentElement.getBoundingClientRect();
+      block.style.cssText = [
+        'position:fixed',
+        'top:0',
+        'left:' + parentRect.left + 'px',
+        'width:' + parentRect.width + 'px',
+        'z-index:9999',
+        'background:rgba(8,15,26,0.96)',
+        'backdrop-filter:blur(8px)',
+        '-webkit-backdrop-filter:blur(8px)',
+      ].join(';');
+    }
+
+    applyFixed();
+    window.addEventListener('resize', applyFixed);
   }
-  if (document.readyState === 'complete') { stickyInit(); }
-  else { window.addEventListener('load', stickyInit); }
-  // also fire on Streamlit re-renders
-  var obs = new MutationObserver(stickyInit);
-  obs.observe(document.body, { childList: true, subtree: false });
+
+  // Fire on load and on every Streamlit re-render (MutationObserver)
+  fixFilter();
+  new MutationObserver(function(muts) {
+    muts.forEach(function(m) { if (m.addedNodes.length) fixFilter(); });
+  }).observe(document.body, { childList: true, subtree: true });
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
+
 
 # ── State Mapping ─────────────────────────────────────────────────────────────
 us_state_to_abbrev = {
@@ -420,14 +408,37 @@ with col1:
 
 with col2:
     st.subheader("Category & Segment Mix")
+    _sun_df = filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index()
+    # Assign explicit colors: segments get blues, parent category ring gets steel tones
+    _sun_cmap = {
+        # outer ring — segments (consistent across all charts)
+        "Consumer":        "#1a56a0",
+        "Corporate":       "#4299e1",
+        "Home Office":     "#90cdf4",
+        # inner ring — categories (darker steel so inner ring reads as structure)
+        "Furniture":       "#1a365d",
+        "Office Supplies": "#1e4a6e",
+        "Technology":      "#17364f",
+        # root node (center)
+        "(?)":             "#0d1b2a",
+    }
     fig_sun = px.sunburst(
-        filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index(),
-        path=['Category','Segment'], values='Sales', color='Segment',
-        color_discrete_map={"Consumer":"#1a56a0","Corporate":"#4299e1","Home Office":"#90cdf4"}
+        _sun_df, path=['Category','Segment'], values='Sales',
+        color='Segment',
+        color_discrete_map=_sun_cmap
     )
+    # Override the inner category ring colours via marker patches
     fig_sun.update_traces(
         hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
-        textfont=dict(size=11)
+        textfont=dict(size=11),
+        insidetextorientation='radial',
+        # Darken parent (category) sectors manually
+        marker=dict(
+            colors=[
+                _sun_cmap.get(lbl, "#1e3a5f")
+                for lbl in fig_sun.data[0].labels
+            ]
+        )
     )
     fig_sun.update_layout(showlegend=True, legend=dict(
         orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5,
