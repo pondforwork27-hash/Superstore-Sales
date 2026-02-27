@@ -3,352 +3,539 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from datetime import datetime
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Geographic Sales Insights",
     page_icon="🗺️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# ── CSS ─────────────────────────────────────────────────────────────────────
+# ── Enhanced CSS with animations and better responsiveness ─────────────────
 st.markdown("""
 <style>
-#filter-spacer { display: block; }
-.filter-bar {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 40%, #1e3a5f 100%);
-    border: 1px solid #2d4a6b;
-    border-bottom: 1px solid rgba(66,153,225,0.25);
-    border-radius: 0 0 14px 14px;
-    padding: 12px 20px 10px 20px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.55);
-    position: relative; overflow: hidden;
-}
-/* ── Filter label and input text colors ── */
-.filter-bar label { color: #ffffff !important; font-size: 0.75rem !important; font-weight: 600 !important; }
-.filter-bar [data-baseweb="select"] input { color: #ffffff !important; }
-.filter-bar [data-baseweb="select"] input::placeholder { color: #ffffff !important; opacity: 1 !important; }
-.filter-bar [data-baseweb="select"] [class$="placeholder"],
-.filter-bar [data-baseweb="select"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
-[data-testid="stMultiSelect"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
-/* ── Multiselect selected tags — match map theme ── */
-span[data-baseweb="tag"] {
-    background: linear-gradient(135deg, #1e3a5f, #2d5a8a) !important;
-    border: 1px solid #4299e1 !important;
-    border-radius: 20px !important;
-    color: #e2f0fb !important;
-}
-span[data-baseweb="tag"] span { color: #e2f0fb !important; }
-span[data-baseweb="tag"] [role="presentation"] svg { fill: #90cdf4 !important; }
-/* multiselect container */
-[data-baseweb="select"] > div {
-    background: rgba(13,27,42,0.85) !important;
-    border: 1px solid #2d5a8a !important;
-    border-radius: 8px !important;
-}
-[data-baseweb="select"] > div:focus-within {
-    border-color: #4299e1 !important;
-    box-shadow: 0 0 0 2px rgba(66,153,225,0.25) !important;
-}
-/* dropdown menu */
-[data-baseweb="popover"] ul { background: #0d1b2a !important; border: 1px solid #2d5a8a !important; }
-[data-baseweb="popover"] li { color: #cbd5e0 !important; }
-[data-baseweb="popover"] li:hover { background: #1e3a5f !important; color: #fff !important; }
-[data-baseweb="popover"] li[aria-selected="true"] {
-    background: #1a3a6b !important;
-    color: #90cdf4 !important;
-}
-.filter-bar::before {
-    content: '';
-    position: absolute; top:0; left:0; right:0; bottom:0;
-    background:
-        radial-gradient(circle at 15% 60%, rgba(66,153,225,0.07) 0%, transparent 55%),
-        radial-gradient(circle at 85% 20%, rgba(99,179,237,0.05) 0%, transparent 45%);
-    pointer-events: none;
-}
-.filter-title {
-    font-size: 0.68rem; font-weight: 700; color: #63b3ed;
-    text-transform: uppercase; letter-spacing: 0.13em; margin-bottom: 8px;
-}
-.pending-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(237,137,54,0.15); border: 1px solid #ed8936;
-    border-radius: 16px; padding: 3px 10px;
-    font-size: 0.74rem; color: #fbd38d; margin-left: 8px; vertical-align: middle;
-}
-.active-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:2px; }
-.pill {
-    display:inline-flex; align-items:center; gap:5px;
-    background:rgba(30,58,95,0.9); border:1px solid #2d5a8a;
-    border-radius:16px; padding:3px 10px; font-size:0.73rem; color:#90cdf4;
-}
-.pill.state { border-color:#e94560; color:#feb2b2; }
-.state-badge {
-    display:inline-flex; align-items:center; gap:8px;
-    background:linear-gradient(90deg,#1e3a5f,#2d5a8a);
-    border:1px solid #4299e1; border-radius:20px;
-    padding:5px 14px; font-size:0.8rem; color:#90cdf4; margin-bottom:10px;
-}
-.state-badge strong { color:#fff; }
-.insight-card {
-    background:linear-gradient(135deg,#0d1b2a 0%,#1b2a3b 100%);
-    border-left:4px solid #4299e1; border-radius:8px;
-    padding:14px 18px; margin-bottom:10px; color:#f0f0f0;
-}
-.insight-card.warn  { border-left-color:#ed8936; }
-.insight-card.good  { border-left-color:#48bb78; }
-.insight-card.alert { border-left-color:#e94560; }
-.insight-card .icon { font-size:1.3rem; }
-.insight-card .label {
-    font-size:0.7rem; color:#a0aec0;
-    text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px;
-}
-.insight-card .value { font-size:1.35rem; font-weight:700; color:#fff; }
-.insight-card .detail { font-size:0.82rem; color:#90cdf4; margin-top:3px; line-height:1.5; }
+    /* Global Styles */
+    .main {
+        background: linear-gradient(135deg, #0a0f1a 0%, #0f1a2f 100%);
+    }
+    
+    /* Animated filter bar */
+    .filter-bar {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 40%, #1e3a5f 100%);
+        border: 1px solid #2d4a6b;
+        border-bottom: 1px solid rgba(66,153,225,0.25);
+        border-radius: 0 0 20px 20px;
+        padding: 16px 24px 12px 24px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.55);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .filter-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        animation: shimmer 3s infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes shimmer {
+        100% { left: 100%; }
+    }
+    
+    /* Animated metric cards */
+    .metric-card {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border: 1px solid #2d4a6b;
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(66,153,225,0.2);
+        border-color: #4299e1;
+    }
+    
+    .metric-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(circle, rgba(66,153,225,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+        margin-bottom: 4px;
+    }
+    
+    .metric-label {
+        font-size: 0.85rem;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .metric-trend {
+        font-size: 0.8rem;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    /* Enhanced insight cards */
+    .insight-card {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border-left: 4px solid #4299e1;
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 12px;
+        color: #f0f0f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .insight-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    
+    .insight-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(66,153,225,0.05));
+        pointer-events: none;
+    }
+    
+    .insight-card.warn { border-left-color: #ed8936; }
+    .insight-card.good { border-left-color: #48bb78; }
+    .insight-card.alert { border-left-color: #e94560; }
+    
+    .insight-icon {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+    }
+    
+    .insight-label {
+        font-size: 0.75rem;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+    }
+    
+    .insight-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 6px;
+    }
+    
+    .insight-detail {
+        font-size: 0.85rem;
+        color: #90cdf4;
+        line-height: 1.5;
+    }
+    
+    /* Animated pills */
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #1e3a5f, #2d4a6b);
+        border: 1px solid #4299e1;
+        border-radius: 30px;
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        color: #e2f0fb;
+        transition: all 0.2s ease;
+        animation: pillPop 0.3s ease;
+    }
+    
+    @keyframes pillPop {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(66,153,225,0.3);
+        background: linear-gradient(135deg, #2d4a6b, #1e3a5f);
+    }
+    
+    .pill.state {
+        background: linear-gradient(135deg, #97266d, #b83280);
+        border-color: #f687b3;
+    }
+    
+    /* Responsive table */
+    .dataframe {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border: 1px solid #2d4a6b;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .dataframe th {
+        background: #1e3a5f;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        border-bottom: 2px solid #4299e1;
+    }
+    
+    .dataframe td {
+        padding: 10px 16px;
+        color: #e2e8f0;
+        border-bottom: 1px solid #2d4a6b;
+    }
+    
+    .dataframe tr:hover td {
+        background: rgba(66,153,225,0.1);
+    }
+    
+    /* Loading animation */
+    .stSpinner > div {
+        border-color: #4299e1 transparent transparent transparent !important;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #0d1b2a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #2d4a6b;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #4299e1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Sentinel + JS: true fixed-position filter ─────────────────────────────────
-# We mark the filter with an id, walk the Streamlit DOM tree to its containing
-# stVerticalBlock, set position:fixed + top:0, and insert an equal-height
-# spacer so the content underneath doesn't jump.
-st.markdown('<span id="filter-sentinel"></span>', unsafe_allow_html=True)
-
-import streamlit.components.v1 as _stc
-_stc.html("""
-<script>
-(function () {
-  var DONE = false;
-
-  function fixFilter() {
-    if (DONE) return;
-    var sentinel = document.getElementById('filter-sentinel');
-    if (!sentinel) return;
-
-    // Walk up the DOM to find the stVerticalBlock that wraps our filter widgets
-    var block = sentinel;
-    var found = false;
-    for (var i = 0; i < 12; i++) {
-      if (!block.parentElement) return;
-      block = block.parentElement;
-      if (block.getAttribute('data-testid') === 'stVerticalBlock') {
-        // Make sure this block actually contains the filter-bar div
-        if (block.querySelector('.filter-bar')) { found = true; break; }
-      }
-    }
-    if (!found) return;
-
-    // Prevent double-execution across re-renders
-    if (block.getAttribute('data-filter-fixed') === '1') return;
-    block.setAttribute('data-filter-fixed', '1');
-    DONE = true;
-
-    // Insert spacer before the block so content doesn't jump up
-    var spacer = document.createElement('div');
-    spacer.id = 'filter-spacer';
-    block.parentNode.insertBefore(spacer, block);
-
-    function applyFixed() {
-      var h = block.scrollHeight;
-      spacer.style.height = h + 'px';
-
-      // Detect left offset from Streamlit's layout padding
-      var parentRect = block.parentElement.getBoundingClientRect();
-      block.style.cssText = [
-        'position:fixed',
-        'top:0',
-        'left:' + parentRect.left + 'px',
-        'width:' + parentRect.width + 'px',
-        'z-index:9999',
-        'background:rgba(8,15,26,0.96)',
-        'backdrop-filter:blur(8px)',
-        '-webkit-backdrop-filter:blur(8px)',
-      ].join(';');
-    }
-
-    applyFixed();
-    window.addEventListener('resize', applyFixed);
-  }
-
-  // Fire on load and on every Streamlit re-render (MutationObserver)
-  fixFilter();
-  new MutationObserver(function(muts) {
-    muts.forEach(function(m) { if (m.addedNodes.length) fixFilter(); });
-  }).observe(document.body, { childList: true, subtree: true });
-})();
-</script>
-""", height=0)
-
-
 # ── State Mapping ─────────────────────────────────────────────────────────────
 us_state_to_abbrev = {
-    "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
-    "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
-    "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA",
-    "Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD",
-    "Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO",
-    "Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ",
-    "New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH",
-    "Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC",
-    "South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT",
-    "Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+    "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 abbrev_to_state = {v: k for k, v in us_state_to_abbrev.items()}
 
-@st.cache_data
+@st.cache_data(ttl=3600, show_spinner="Loading sales data...")
 def load_data():
+    """Load and preprocess sales data with caching"""
     df = pd.read_csv('cleaned_train.csv')
     df['State Code'] = df['State'].map(us_state_to_abbrev)
     df['Order Date'] = pd.to_datetime(df['Order Date'])
-    df['Year']  = df['Order Date'].dt.year
+    df['Year'] = df['Order Date'].dt.year
     df['Month'] = df['Order Date'].dt.to_period('M').astype(str)
+    df['Quarter'] = df['Order Date'].dt.to_period('Q').astype(str)
+    df['Month_Name'] = df['Order Date'].dt.strftime('%b %Y')
+    
+    # Add derived metrics
+    df['Profit_Margin'] = (df['Profit'] / df['Sales'] * 100).round(2)
+    df['Order_Value'] = df['Sales'] / df['Quantity']
+    
     return df
 
-df = load_data()
+try:
+    df = load_data()
+except FileNotFoundError:
+    st.error("⚠️ Data file not found. Please ensure 'cleaned_train.csv' is in the current directory.")
+    st.stop()
 
-# ── Session state init ────────────────────────────────────────────────────────
+# ── Session state initialization ──────────────────────────────────────────────
 defaults = {
     'clicked_state': None,
-    'clicked_city':  None,
-    'sel_region':    [],
-    'sel_category':  [],
-    'sel_segment':   [],
+    'clicked_city': None,
+    'sel_region': [],
+    'sel_category': [],
+    'sel_segment': [],
+    'date_range': None,
+    'view_mode': 'overview',
+    'chart_animations': True
 }
+
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ── TITLE ─────────────────────────────────────────────────────────────────────
-st.title("🗺️ Regional Sales Intelligence")
-st.caption("Select filters to update all charts instantly. Click a state on the map to drill down.")
+# ── Title with dynamic subtitle ──────────────────────────────────────────────
+st.title("🗺️ Regional Sales Intelligence Dashboard")
+st.caption("Interactive analytics for strategic decision-making • Last updated: " + 
+           datetime.now().strftime("%B %d, %Y"))
 
-# ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
-st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
-
-region_opts   = sorted(df['Region'].unique().tolist())
-category_opts = sorted(df['Category'].unique().tolist())
-segment_opts  = sorted(df['Segment'].unique().tolist())
-
-fc1, fc2, fc3 = st.columns(3)
-
-with fc1:
-    sel_region = st.multiselect(
-        "Region", region_opts,
-        default=[v for v in st.session_state.sel_region if v in region_opts],
-        placeholder="All regions", key='_w_region'
-    )
-with fc2:
-    sel_category = st.multiselect(
-        "Category", category_opts,
-        default=[v for v in st.session_state.sel_category if v in category_opts],
-        placeholder="All categories", key='_w_category'
-    )
-with fc3:
-    sel_segment = st.multiselect(
-        "Segment", segment_opts,
-        default=[v for v in st.session_state.sel_segment if v in segment_opts],
-        placeholder="All segments", key='_w_segment'
-    )
-
-# Sync session state immediately (no Apply needed)
-st.session_state.sel_region   = list(sel_region)
-st.session_state.sel_category = list(sel_category)
-st.session_state.sel_segment  = list(sel_segment)
-
-# Active filter pills
-pills_html = '<div class="active-pills">'
-cs = st.session_state.clicked_state
-for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
-for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
-for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
-if cs:                  pills_html += f'<div class="pill state">📍 {cs}</div>'
-if not sel_region and not sel_category and not sel_segment and not cs:
-    pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
-pills_html += '</div>'
-st.markdown(pills_html, unsafe_allow_html=True)
-
-st.markdown('</div></div>', unsafe_allow_html=True)  # close filter-bar + sticky-filter-wrap
-
-# ── MAP CLICK handler (state clear button appears below filter bar) ────────────
-if st.session_state.clicked_state:
-    col_badge, col_clear = st.columns([5, 1])
-    with col_badge:
-        st.markdown(f'<div class="state-badge">📍 Map filter active — <strong>{st.session_state.clicked_state}</strong></div>', unsafe_allow_html=True)
-    with col_clear:
-        if st.button("✕ Clear state", use_container_width=True):
+# ── Filter Bar with improved UX ──────────────────────────────────────────────
+with st.container():
+    st.markdown('<div class="filter-bar">', unsafe_allow_html=True)
+    
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+    
+    with col1:
+        region_opts = sorted(df['Region'].unique().tolist())
+        sel_region = st.multiselect(
+            "🌎 Region",
+            region_opts,
+            default=st.session_state.sel_region,
+            placeholder="All regions",
+            help="Filter by geographic region"
+        )
+    
+    with col2:
+        category_opts = sorted(df['Category'].unique().tolist())
+        sel_category = st.multiselect(
+            "📦 Category",
+            category_opts,
+            default=st.session_state.sel_category,
+            placeholder="All categories",
+            help="Filter by product category"
+        )
+    
+    with col3:
+        segment_opts = sorted(df['Segment'].unique().tolist())
+        sel_segment = st.multiselect(
+            "👥 Segment",
+            segment_opts,
+            default=st.session_state.sel_segment,
+            placeholder="All segments",
+            help="Filter by customer segment"
+        )
+    
+    with col4:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔄 Clear All", use_container_width=True, type="secondary"):
+            st.session_state.sel_region = []
+            st.session_state.sel_category = []
+            st.session_state.sel_segment = []
             st.session_state.clicked_state = None
+            st.session_state.clicked_city = None
             st.rerun()
+    
+    # Update session state
+    st.session_state.sel_region = list(sel_region)
+    st.session_state.sel_category = list(sel_category)
+    st.session_state.sel_segment = list(sel_segment)
+    
+    # Active filters display
+    active_filters = []
+    if sel_region:
+        active_filters.extend([f"🌎 {r}" for r in sel_region])
+    if sel_category:
+        active_filters.extend([f"📦 {c}" for c in sel_category])
+    if sel_segment:
+        active_filters.extend([f"👥 {s}" for s in sel_segment])
+    if st.session_state.clicked_state:
+        active_filters.append(f"📍 {st.session_state.clicked_state}")
+    
+    if active_filters:
+        filters_html = '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">'
+        for filter_text in active_filters:
+            filters_html += f'<span class="pill">{filter_text}</span>'
+        filters_html += '</div>'
+        st.markdown(filters_html, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ── BUILD filtered_df ───────────────────────────────────────────────────────────────
-mask = pd.Series([True] * len(df), index=df.index)
-if sel_region:   mask &= df['Region'].isin(sel_region)
-if sel_category: mask &= df['Category'].isin(sel_category)
-if sel_segment:  mask &= df['Segment'].isin(sel_segment)
-if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
-if st.session_state.clicked_city:  mask &= df['City']  == st.session_state.clicked_city
-
-filtered_df = df[mask]
+# ── Build filtered dataframe with progress indication ───────────────────────
+with st.spinner("Applying filters..."):
+    mask = pd.Series([True] * len(df), index=df.index)
+    if sel_region:
+        mask &= df['Region'].isin(sel_region)
+    if sel_category:
+        mask &= df['Category'].isin(sel_category)
+    if sel_segment:
+        mask &= df['Segment'].isin(sel_segment)
+    if st.session_state.clicked_state:
+        mask &= df['State'] == st.session_state.clicked_state
+    if st.session_state.clicked_city:
+        mask &= df['City'] == st.session_state.clicked_city
+    
+    filtered_df = df[mask].copy()
 
 if filtered_df.empty:
-    st.warning("No data matches the current filter combination. Try adjusting your selections.")
+    st.warning("⚠️ No data matches the current filter combination. Try adjusting your selections.")
     st.stop()
 
-# ── METRICS ───────────────────────────────────────────────────────────────────
-state_sales   = filtered_df.groupby(['State','State Code'])['Sales'].sum().reset_index()
-cat_sales     = filtered_df.groupby('Category')['Sales'].sum().reset_index()
-subcat_sales  = filtered_df.groupby('Sub-Category')['Sales'].sum().reset_index()
-region_sales  = filtered_df.groupby('Region')['Sales'].sum().reset_index()
-segment_sales = filtered_df.groupby('Segment')['Sales'].sum().reset_index()
-city_sales    = filtered_df.groupby('City')['Sales'].sum().reset_index()
-monthly_sales = filtered_df.groupby('Month')['Sales'].sum().reset_index().sort_values('Month')
-region_seg    = filtered_df.groupby(['Region','Segment'])['Sales'].sum().reset_index()
+# ── Quick Stats Row with enhanced metrics ───────────────────────────────────
+st.markdown("### 📊 Key Performance Indicators")
 
-total_sales   = filtered_df['Sales'].sum()
-total_orders  = filtered_df['Order ID'].nunique()
-avg_order_val = total_sales / total_orders if total_orders else 0
-top_state     = state_sales.sort_values('Sales', ascending=False).iloc[0]
-top_city_row  = city_sales.sort_values('Sales', ascending=False).iloc[0]
-top_cat_row   = cat_sales.sort_values('Sales', ascending=False).iloc[0]
-top_subcat_row= subcat_sales.sort_values('Sales', ascending=False).iloc[0]
-top_region_row= region_sales.sort_values('Sales', ascending=False).iloc[0]
-top_seg_row   = segment_sales.sort_values('Sales', ascending=False).iloc[0]
-state_share   = (top_state['Sales'] / total_sales * 100) if total_sales else 0
+# Calculate metrics
+total_sales = filtered_df['Sales'].sum()
+total_orders = filtered_df['Order ID'].nunique()
+avg_order_value = total_sales / total_orders if total_orders else 0
+total_profit = filtered_df['Profit'].sum()
+avg_margin = (filtered_df['Profit'].sum() / filtered_df['Sales'].sum() * 100) if total_sales > 0 else 0
 
-# ── KPI ───────────────────────────────────────────────────────────────────────
-k1,k2,k3,k4 = st.columns(4)
-k1.metric("💰 Total Sales",     f"${total_sales:,.0f}")
-k2.metric("📦 Total Orders",    f"{total_orders:,}")
-k3.metric("🧾 Avg Order Value", f"${avg_order_val:,.0f}")
-k4.metric("🏆 #1 Region",       top_region_row['Region'])
+# YoY comparison (if applicable)
+current_year = filtered_df['Year'].max()
+prev_year_sales = filtered_df[filtered_df['Year'] == current_year - 1]['Sales'].sum()
+yoy_growth = ((total_sales - prev_year_sales) / prev_year_sales * 100) if prev_year_sales > 0 else 0
+
+cols = st.columns(4)
+metrics = [
+    (f"${total_sales:,.0f}", "Total Sales", f"{yoy_growth:+.1f}% vs last year", "💰"),
+    (f"{total_orders:,}", "Total Orders", f"{len(filtered_df):,} items", "📦"),
+    (f"${avg_order_value:,.0f}", "Avg Order Value", f"{filtered_df['Quantity'].mean():.1f} items/order", "🧾"),
+    (f"${total_profit:,.0f}", "Total Profit", f"{avg_margin:.1f}% margin", "💎")
+]
+
+for col, (value, label, trend, icon) in zip(cols, metrics):
+    with col:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="metric-label">{label}</span>
+                <span style="font-size: 1.5rem;">{icon}</span>
+            </div>
+            <div class="metric-value">{value}</div>
+            <div class="metric-trend">
+                <span style="color: {'#48bb78' if '+' in trend else '#e94560' if '-' in trend else '#a0aec0'}">
+                    {trend}
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ── MAP ───────────────────────────────────────────────────────────────────────
-st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
+# ── Map Section with enhanced interactivity ─────────────────────────────────
+st.subheader("📍 Geographic Sales Distribution")
 
-all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
-fig_map = px.choropleth(
-    all_state_sales, locations='State Code', locationmode="USA-states",
-    color='Sales', scope="usa", hover_name='State',
-    color_continuous_scale="Blues", labels={'Sales':'Total Sales ($)'}
-)
-fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
+map_col1, map_col2 = st.columns([3, 1])
 
-if st.session_state.clicked_state:
-    hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
-    if not hl.empty:
-        fig_map.add_trace(go.Choropleth(
-            locations=hl['State Code'], z=[1], locationmode="USA-states",
-            colorscale=[[0,"rgba(233,69,96,0)"], [1,"rgba(233,69,96,0)"]],
-            showscale=False, marker_line_color="#e94560",
-            marker_line_width=3, hoverinfo='skip',
-        ))
+with map_col1:
+    # Prepare map data
+    all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
+    
+    fig_map = px.choropleth(
+        all_state_sales,
+        locations='State Code',
+        locationmode="USA-states",
+        color='Sales',
+        scope="usa",
+        hover_name='State',
+        color_continuous_scale=[[0, '#0d1b2a'], [0.3, '#1e3a5f'], [0.6, '#2b6cb0'], [1, '#90cdf4']],
+        labels={'Sales': 'Total Sales ($)'}
+    )
+    
+    fig_map.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>Sales: $%{z:,.0f}<extra></extra>",
+        marker_line_color='#1e3a5f',
+        marker_line_width=1
+    )
+    
+    # Highlight selected state
+    if st.session_state.clicked_state:
+        hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
+        if not hl.empty:
+            fig_map.add_trace(go.Choropleth(
+                locations=hl['State Code'],
+                z=[1],
+                locationmode="USA-states",
+                colorscale=[[0, "rgba(233,69,96,0)"], [1, "rgba(233,69,96,0)"]],
+                showscale=False,
+                marker_line_color="#e94560",
+                marker_line_width=3,
+                hoverinfo='skip'
+            ))
+    
+    fig_map.update_layout(
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        geo_bgcolor='rgba(0,0,0,0)',
+        coloraxis_colorbar=dict(
+            title="Sales ($)",
+            tickprefix="$",
+            thickness=15,
+            len=0.7,
+            bgcolor='rgba(13,27,42,0.8)',
+            tickfont=dict(color='white')
+        ),
+        height=500
+    )
+    
+    map_event = st.plotly_chart(
+        fig_map,
+        use_container_width=True,
+        on_select="rerun",
+        key="choropleth_map",
+        config={'displayModeBar': False}
+    )
 
-fig_map.update_layout(
-    margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)',
-    coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$")
-)
-map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map")
+with map_col2:
+    st.markdown("### 📌 Map Controls")
+    
+    if st.session_state.clicked_state:
+        st.info(f"📍 Currently viewing: **{st.session_state.clicked_state}**")
+        if st.button("🗑️ Clear State Filter", use_container_width=True):
+            st.session_state.clicked_state = None
+            st.rerun()
+    
+    # Top states list
+    st.markdown("### 🏆 Top States")
+    top_states = all_state_sales.nlargest(5, 'Sales')[['State', 'Sales']]
+    for idx, row in top_states.iterrows():
+        st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; padding: 8px; 
+                    border-bottom: 1px solid #2d4a6b;">
+            <span>{idx+1}. {row['State']}</span>
+            <span style="color: #90cdf4;">${row['Sales']:,.0f}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Map insight
+    top_state = all_state_sales.nlargest(1, 'Sales').iloc[0]
+    st.markdown(f"""
+    <div class="insight-card" style="margin-top: 16px;">
+        <div class="insight-icon">💡</div>
+        <div class="insight-label">Map Insight</div>
+        <div class="insight-value">{top_state['State']}</div>
+        <div class="insight-detail">
+            Leads all states with ${top_state['Sales']:,.0f} in sales
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
+# Handle map clicks
 if map_event and map_event.selection and map_event.selection.get("points"):
     pt = map_event.selection["points"][0]
     clicked_abbrev = pt.get("location")
@@ -356,261 +543,237 @@ if map_event and map_event.selection and map_event.selection.get("points"):
         new_state = abbrev_to_state.get(clicked_abbrev)
         if new_state and new_state != st.session_state.clicked_state:
             st.session_state.clicked_state = new_state
+            st.rerun()
         elif new_state == st.session_state.clicked_state:
             st.session_state.clicked_state = None
-        st.rerun()
+            st.rerun()
 
-st.markdown(f"""
-<div class="insight-card">
-  <div class="icon">📌</div>
-  <div class="label">Map Insight</div>
-  <div class="value">{top_state['State']} leads all states</div>
-  <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
-  <strong>{state_share:.1f}%</strong> of total revenue in this selection.
-  Focus distribution and logistics investments here for maximum impact.</div>
+st.markdown("---")
+
+# ── Performance Breakdown with tabs ─────────────────────────────────────────
+st.subheader("📈 Performance Analytics")
+
+tab1, tab2, tab3 = st.tabs(["📊 Category Analysis", "👥 Segment Insights", "📅 Time Trends"])
+
+with tab1:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Category sales
+        cat_sales = filtered_df.groupby('Category')['Sales'].sum().reset_index()
+        fig_cat = px.pie(
+            cat_sales,
+            values='Sales',
+            names='Category',
+            title='Sales by Category',
+            color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1'],
+            hole=0.4
+        )
+        fig_cat.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hovertemplate='<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percent}<extra></extra>'
+        )
+        fig_cat.update_layout(
+            showlegend=False,
+            margin=dict(t=40, b=0, l=0, r=0),
+            height=350
+        )
+        st.plotly_chart(fig_cat, use_container_width=True)
+    
+    with col2:
+        # Sub-category ranking
+        subcat_sales = filtered_df.groupby('Sub-Category')['Sales'].sum().reset_index()
+        subcat_sales = subcat_sales.nlargest(10, 'Sales')
+        
+        fig_subcat = px.bar(
+            subcat_sales,
+            x='Sales',
+            y='Sub-Category',
+            orientation='h',
+            title='Top 10 Sub-Categories',
+            color='Sales',
+            color_continuous_scale='Blues'
+        )
+        fig_subcat.update_traces(
+            hovertemplate='<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>'
+        )
+        fig_subcat.update_layout(
+            yaxis={'categoryorder': 'total ascending'},
+            xaxis=dict(title='Sales ($)', tickprefix='$'),
+            coloraxis_showscale=False,
+            height=350,
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_subcat, use_container_width=True)
+
+with tab2:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Segment performance
+        seg_sales = filtered_df.groupby('Segment')['Sales'].sum().reset_index()
+        fig_seg = px.bar(
+            seg_sales,
+            x='Segment',
+            y='Sales',
+            title='Sales by Customer Segment',
+            color='Segment',
+            color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1']
+        )
+        fig_seg.update_traces(
+            hovertemplate='<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>'
+        )
+        fig_seg.update_layout(
+            showlegend=False,
+            xaxis=dict(title=''),
+            yaxis=dict(title='Sales ($)', tickprefix='$'),
+            height=350,
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_seg, use_container_width=True)
+    
+    with col2:
+        # Segment × Category heatmap
+        seg_cat_pivot = filtered_df.pivot_table(
+            values='Sales',
+            index='Segment',
+            columns='Category',
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=seg_cat_pivot.values,
+            x=seg_cat_pivot.columns,
+            y=seg_cat_pivot.index,
+            colorscale='Blues',
+            text=[[f"${v:,.0f}" for v in row] for row in seg_cat_pivot.values],
+            texttemplate='%{text}',
+            textfont=dict(size=10, color='white'),
+            hovertemplate='<b>%{y}</b> × <b>%{x}</b><br>Sales: $%{z:,.0f}<extra></extra>'
+        ))
+        
+        fig_heat.update_layout(
+            title='Segment × Category Matrix',
+            height=350,
+            margin=dict(t=40, b=0, l=0, r=0),
+            xaxis=dict(title=''),
+            yaxis=dict(title='')
+        )
+        st.plotly_chart(fig_heat, use_container_width=True)
+
+with tab3:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Monthly trend
+        monthly_sales = filtered_df.groupby('Month_Name')['Sales'].sum().reset_index()
+        
+        fig_trend = px.line(
+            monthly_sales,
+            x='Month_Name',
+            y='Sales',
+            title='Monthly Sales Trend',
+            markers=True
+        )
+        fig_trend.update_traces(
+            line_color='#4299e1',
+            line_width=3,
+            marker=dict(size=8, color='#90cdf4', line=dict(color='white', width=1))
+        )
+        fig_trend.update_layout(
+            xaxis_tickangle=-45,
+            yaxis=dict(title='Sales ($)', tickprefix='$'),
+            height=350,
+            margin=dict(t=40, b=80, l=0, r=0)
+        )
+        st.plotly_chart(fig_trend, use_container_width=True)
+    
+    with col2:
+        # Quarterly comparison
+        quarterly_sales = filtered_df.groupby('Quarter')['Sales'].sum().reset_index()
+        
+        fig_quarter = px.bar(
+            quarterly_sales,
+            x='Quarter',
+            y='Sales',
+            title='Quarterly Performance',
+            color='Sales',
+            color_continuous_scale='Blues'
+        )
+        fig_quarter.update_traces(
+            hovertemplate='<b>Q%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>'
+        )
+        fig_quarter.update_layout(
+            xaxis=dict(title=''),
+            yaxis=dict(title='Sales ($)', tickprefix='$'),
+            coloraxis_showscale=False,
+            height=350,
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_quarter, use_container_width=True)
+
+st.markdown("---")
+
+# ── Cities Table with export ────────────────────────────────────────────────
+st.subheader("🏙️ City Performance")
+
+# City-level analysis
+city_stats = filtered_df.groupby('City').agg({
+    'Sales': 'sum',
+    'Order ID': 'nunique',
+    'Profit': 'sum',
+    'Quantity': 'sum'
+}).reset_index()
+
+city_stats.columns = ['City', 'Total Sales', 'Order Count', 'Total Profit', 'Units Sold']
+city_stats['Avg Order Value'] = city_stats['Total Sales'] / city_stats['Order Count']
+city_stats['Profit Margin'] = (city_stats['Total Profit'] / city_stats['Total Sales'] * 100).round(1)
+
+# Sort and format
+city_stats = city_stats.nlargest(20, 'Total Sales').reset_index(drop=True)
+city_stats.index = range(1, len(city_stats) + 1)
+
+# Format columns
+display_df = city_stats.copy()
+display_df['Total Sales'] = display_df['Total Sales'].apply('${:,.0f}'.format)
+display_df['Total Profit'] = display_df['Total Profit'].apply('${:,.0f}'.format)
+display_df['Avg Order Value'] = display_df['Avg Order Value'].apply('${:,.0f}'.format)
+display_df['Profit Margin'] = display_df['Profit Margin'].apply('{:.1f}%'.format)
+
+# Add export button
+col1, col2 = st.columns([3, 1])
+with col2:
+    if st.button("📥 Export to CSV", use_container_width=True):
+        csv = city_stats.to_csv(index=False)
+        st.download_button(
+            label="Download",
+            data=csv,
+            file_name=f"city_sales_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+
+# Display table
+st.dataframe(
+    display_df,
+    use_container_width=True,
+    height=400,
+    column_config={
+        "City": st.column_config.TextColumn("City", width="medium"),
+        "Total Sales": st.column_config.TextColumn("Total Sales", width="small"),
+        "Order Count": st.column_config.NumberColumn("Orders", width="small", format="%d"),
+        "Total Profit": st.column_config.TextColumn("Profit", width="small"),
+        "Units Sold": st.column_config.NumberColumn("Units", width="small", format="%d"),
+        "Avg Order Value": st.column_config.TextColumn("Avg Order", width="small"),
+        "Profit Margin": st.column_config.TextColumn("Margin", width="small")
+    }
+)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; color: #718096; font-size: 0.8rem; padding: 20px;">
+    🗺️ Regional Sales Intelligence Dashboard • Built with Streamlit • Data updates in real-time
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
-st.header("💡 Key Business Insights")
-c1,c2,c3 = st.columns(3)
-with c1:
-    st.markdown(f'<div class="insight-card good"><div class="icon">🏅</div><div class="label">Top State</div><div class="value">{top_state["State"]}</div><div class="detail">${top_state["Sales"]:,.0f} in sales ({state_share:.1f}% of total)</div></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="insight-card"><div class="icon">🏙️</div><div class="label">Top City</div><div class="value">{top_city_row["City"]}</div><div class="detail">${top_city_row["Sales"]:,.0f} — highest city-level revenue driver</div></div>', unsafe_allow_html=True)
-with c2:
-    st.markdown(f'<div class="insight-card good"><div class="icon">📦</div><div class="label">Dominant Category</div><div class="value">{top_cat_row["Category"]}</div><div class="detail">${top_cat_row["Sales"]:,.0f} — prime candidate for increased marketing spend</div></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="insight-card"><div class="icon">🔖</div><div class="label">Top Sub-Category</div><div class="value">{top_subcat_row["Sub-Category"]}</div><div class="detail">${top_subcat_row["Sales"]:,.0f} — highest-earning product sub-group</div></div>', unsafe_allow_html=True)
-with c3:
-    st.markdown(f'<div class="insight-card good"><div class="icon">👥</div><div class="label">Leading Segment</div><div class="value">{top_seg_row["Segment"]}</div><div class="detail">${top_seg_row["Sales"]:,.0f} — your most valuable customer segment</div></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="insight-card"><div class="icon">🌎</div><div class="label">Top Region</div><div class="value">{top_region_row["Region"]}</div><div class="detail">${top_region_row["Sales"]:,.0f} — strongest regional market</div></div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── PERFORMANCE BREAKDOWN ─────────────────────────────────────────────────────
-st.header("📊 Performance Breakdown")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Top 10 States by Sales")
-    top_states_df = state_sales.sort_values('Sales', ascending=False).head(10)
-    fig_bar = px.bar(top_states_df, x='Sales', y='State', orientation='h',
-                     color='Sales', color_continuous_scale='Blues', labels={'Sales':'Total Sales ($)'})
-    fig_bar.update_traces(hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>")
-    fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, coloraxis_showscale=False)
-    st.plotly_chart(fig_bar, use_container_width=True, key="bar_states")
-
-with col2:
-    st.subheader("Category & Segment Mix")
-    _sun_df = filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index()
-    # Assign explicit colors: segments get blues, parent category ring gets steel tones
-    _sun_cmap = {
-        # outer ring — segments (consistent across all charts)
-        "Consumer":        "#1a56a0",
-        "Corporate":       "#4299e1",
-        "Home Office":     "#90cdf4",
-        # inner ring — categories (darker steel so inner ring reads as structure)
-        "Furniture":       "#1a365d",
-        "Office Supplies": "#1e4a6e",
-        "Technology":      "#17364f",
-        # root node (center)
-        "(?)":             "#0d1b2a",
-    }
-    fig_sun = px.sunburst(
-        _sun_df, path=['Category','Segment'], values='Sales',
-        color='Segment',
-        color_discrete_map=_sun_cmap
-    )
-    # Override the inner category ring colours via marker patches
-    fig_sun.update_traces(
-        hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
-        textfont=dict(size=11),
-        insidetextorientation='radial',
-        # Darken parent (category) sectors manually
-        marker=dict(
-            colors=[
-                _sun_cmap.get(lbl, "#1e3a5f")
-                for lbl in fig_sun.data[0].labels
-            ]
-        )
-    )
-    fig_sun.update_layout(showlegend=True, legend=dict(
-        orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5,
-        font=dict(size=11), title=dict(text="Segment  ", font=dict(size=11))
-    ))
-    st.plotly_chart(fig_sun, use_container_width=True, key="sunburst_cat")
-    st.markdown('''
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:-8px;margin-bottom:4px;">
-      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
-        <div style="width:12px;height:12px;border-radius:50%;background:#1a56a0;"></div>
-        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Consumer</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
-        <div style="width:12px;height:12px;border-radius:50%;background:#4299e1;"></div>
-        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Corporate</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;background:#0d1b2a;border:1px solid #2d4a6b;border-radius:20px;padding:4px 12px;">
-        <div style="width:12px;height:12px;border-radius:50%;background:#90cdf4;"></div>
-        <span style="font-size:0.78rem;color:#e2e8f0;font-weight:600;">Home Office</span>
-      </div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── CORRELATION ───────────────────────────────────────────────────────────────
-st.header("🔗 Segment × Category Correlation")
-st.caption("How strongly do spending patterns across segments track each other? A score near 1.0 means the two segments rise and fall together.")
-
-corr_cols = st.columns([1.1, 1, 0.9])
-
-with corr_cols[0]:
-    monthly_seg_pivot = filtered_df.groupby(['Month','Segment'])['Sales'].sum().unstack(fill_value=0)
-    corr_matrix = monthly_seg_pivot.corr()
-    fig_heat = go.Figure(go.Heatmap(
-        z=corr_matrix.values,
-        x=corr_matrix.columns.tolist(),
-        y=corr_matrix.index.tolist(),
-        colorscale=[[0,"#0d1b2a"],[0.4,"#1e3a5f"],[0.7,"#2b6cb0"],[1,"#90cdf4"]],
-        zmin=0, zmax=1,
-        text=[[f"{v:.2f}" for v in row] for row in corr_matrix.values],
-        texttemplate="%{text}", textfont=dict(size=14, color="white"),
-        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>Correlation: %{z:.3f}<extra></extra>",
-        showscale=True, colorbar=dict(title="r", thickness=12, len=0.7)
-    ))
-    fig_heat.update_layout(
-        title=dict(text="Monthly Sales Correlation by Segment", font=dict(size=13), x=0.5),
-        margin=dict(l=10, r=10, t=40, b=10), height=280
-    )
-    st.plotly_chart(fig_heat, use_container_width=True, key="corr_heatmap")
-
-with corr_cols[1]:
-    seg_cat_df = filtered_df.groupby(['Segment','Category'])['Sales'].sum().reset_index()
-    seg_cat_df['Share'] = seg_cat_df.groupby('Segment')['Sales'].transform(lambda x: x/x.sum()*100)
-    fig_segcat = px.bar(
-        seg_cat_df, x='Segment', y='Share', color='Category', barmode='stack',
-        color_discrete_sequence=["#1a56a0","#4299e1","#90cdf4"],
-        labels={'Share':'% of Segment Sales','Segment':''}
-    )
-    fig_segcat.update_traces(hovertemplate="<b>%{x}</b><br>Category: %{fullData.name}<br>Share: %{y:.1f}%<extra></extra>")
-    fig_segcat.update_layout(
-        title=dict(text="Category Mix per Segment (%)", font=dict(size=13), x=0.5),
-        legend=dict(orientation="h", yanchor="bottom", y=-0.52, xanchor="center", x=0.5, font=dict(size=10)),
-        xaxis=dict(title=None, tickfont=dict(size=11)),
-        yaxis=dict(ticksuffix="%"),
-        margin=dict(l=10, r=10, t=40, b=70), height=300
-    )
-    st.plotly_chart(fig_segcat, use_container_width=True, key="seg_cat_mix")
-
-with corr_cols[2]:
-    segs  = corr_matrix.columns.tolist()
-    pairs = [(segs[i], segs[j], corr_matrix.iloc[i,j])
-             for i in range(len(segs)) for j in range(i+1, len(segs))]
-    pairs.sort(key=lambda x: x[2], reverse=True)
-    strongest = pairs[0]
-    weakest   = pairs[-1]
-    st.markdown(f"""
-    <div class="insight-card good" style="margin-top:8px;">
-      <div class="icon">📈</div><div class="label">Strongest Correlation</div>
-      <div class="value" style="font-size:1.1rem;">{strongest[0]} × {strongest[1]}</div>
-      <div class="detail">r = <strong>{strongest[2]:.2f}</strong> — these segments move almost in lockstep. Campaigns that boost one will likely lift the other.</div>
-    </div>""", unsafe_allow_html=True)
-    st.markdown(f"""
-    <div class="insight-card warn">
-      <div class="icon">📉</div><div class="label">Weakest Correlation</div>
-      <div class="value" style="font-size:1.1rem;">{weakest[0]} × {weakest[1]}</div>
-      <div class="detail">r = <strong>{weakest[2]:.2f}</strong> — these segments behave more independently. Tailored strategies recommended.</div>
-    </div>""", unsafe_allow_html=True)
-    cat_pivot = filtered_df.groupby(['Segment','Category'])['Sales'].sum().unstack(fill_value=0)
-    most_balanced = (cat_pivot.div(cat_pivot.sum(axis=1), axis=0).std(axis=1)).idxmin()
-    st.markdown(f"""
-    <div class="insight-card">
-      <div class="icon">⚖️</div><div class="label">Most Balanced Buyer</div>
-      <div class="value" style="font-size:1.1rem;">{most_balanced}</div>
-      <div class="detail">Distributes spend most evenly across all three categories — lowest variance in category mix.</div>
-    </div>""", unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── TRENDS ────────────────────────────────────────────────────────────────────
-st.header("📈 Sales Trends & Sub-Category Deep Dive")
-col3, col4 = st.columns(2)
-
-with col3:
-    st.subheader("Monthly Sales Trend")
-    monthly_sales['label'] = monthly_sales['Sales'].apply(
-        lambda v: f"${v/1000:.0f}K" if v >= 1000 else f"${v:.0f}"
-    )
-    fig_line = px.line(monthly_sales, x='Month', y='Sales', markers=True,
-                       text='label', labels={'Sales':'Total Sales ($)','Month':''})
-    fig_line.update_traces(
-        line_color='#4299e1', line_width=2.5,
-        marker=dict(size=7, color='#4299e1'),
-        textposition='top center', textfont=dict(size=10, color='#90cdf4'),
-        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>"
-    )
-    fig_line.update_layout(
-        xaxis_tickangle=-45,
-        yaxis=dict(tickprefix="$", tickformat=",.0f"),
-        yaxis_range=[0, monthly_sales['Sales'].max() * 1.18]
-    )
-    st.plotly_chart(fig_line, use_container_width=True, key="line_trend")
-
-    if len(monthly_sales) >= 2:
-        pct_chg = ((monthly_sales.iloc[-1]['Sales'] - monthly_sales.iloc[0]['Sales'])
-                   / monthly_sales.iloc[0]['Sales'] * 100)
-        card_cls   = "good" if pct_chg > 0 else "alert"
-        trend_word = "grown" if pct_chg > 0 else "declined"
-        advice     = "Momentum is positive — consider scaling inventory." if pct_chg > 0 else "Investigate demand drivers and revisit pricing strategy."
-        st.markdown(f'<div class="insight-card {card_cls}"><div class="icon">📈</div><div class="label">Trend Insight</div><div class="value">{abs(pct_chg):.1f}% {"▲" if pct_chg > 0 else "▼"} over period</div><div class="detail">Sales have <strong>{trend_word} {abs(pct_chg):.1f}%</strong> from first to last month. {advice}</div></div>', unsafe_allow_html=True)
-
-with col4:
-    st.subheader("Sub-Category Sales Ranking")
-    subcat_sorted = subcat_sales.sort_values('Sales', ascending=False)
-    fig_subcat = px.bar(subcat_sorted, x='Sub-Category', y='Sales',
-                        color='Sales', color_continuous_scale='Teal', labels={'Sales':'Total Sales ($)'})
-    fig_subcat.update_traces(hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>")
-    fig_subcat.update_layout(xaxis_tickangle=-45, coloraxis_showscale=False)
-    st.plotly_chart(fig_subcat, use_container_width=True, key="bar_subcat")
-
-    bottom_subcat = subcat_sorted.iloc[-1]
-    st.markdown(f'<div class="insight-card warn"><div class="icon">⚠️</div><div class="label">Underperformer Alert</div><div class="value">{bottom_subcat["Sub-Category"]}</div><div class="detail">Only <strong>${bottom_subcat["Sales"]:,.0f}</strong> in sales — lowest sub-category. Review pricing, promotion, and placement or consider deprioritizing stock.</div></div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── REGION × SEGMENT ──────────────────────────────────────────────────────────
-st.header("🌎 Region vs. Segment Matrix")
-fig_grouped = px.bar(region_seg, x='Region', y='Sales', color='Segment',
-                     barmode='group', color_discrete_sequence=px.colors.qualitative.Set2,
-                     labels={'Sales':'Total Sales ($)'})
-fig_grouped.update_traces(hovertemplate="<b>%{x}</b><br>Segment: %{fullData.name}<br>Sales: $%{y:,.0f}<extra></extra>")
-st.plotly_chart(fig_grouped, use_container_width=True, key="grouped_region_seg")
-
-best_rs  = region_seg.sort_values('Sales', ascending=False).iloc[0]
-worst_rs = region_seg.sort_values('Sales').iloc[0]
-st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div class="label">Strategic Insight</div><div class="value">Best combo: {best_rs["Region"]} × {best_rs["Segment"]}</div><div class="detail"><strong>{best_rs["Segment"]}</strong> in <strong>{best_rs["Region"]}</strong> delivers the highest sales at <strong>${best_rs["Sales"]:,.0f}</strong>. Lowest performer: <strong>{worst_rs["Segment"]}</strong> in <strong>{worst_rs["Region"]}</strong> (${worst_rs["Sales"]:,.0f}) — a clear opportunity for targeted growth campaigns.</div></div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── CITIES TABLE ────────────────────────────────────────────────────────────
-st.header("🏙️ Cities by Revenue")
-
-_city_mask = pd.Series([True] * len(df), index=df.index)
-if sel_region:   _city_mask &= df['Region'].isin(sel_region)
-if sel_category: _city_mask &= df['Category'].isin(sel_category)
-if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
-if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
-_city_base = df[_city_mask]
-
-city_table = _city_base.groupby('City')['Sales'].sum().reset_index()
-city_table = city_table.sort_values('Sales', ascending=False).reset_index(drop=True)
-city_table.index += 1
-city_table.columns = ['City', 'Total Sales']
-city_table['Rank'] = city_table.index
-city_table['Share %'] = (city_table['Total Sales'] / city_table['Total Sales'].sum() * 100).round(1)
-city_table['Total Sales'] = city_table['Total Sales'].map('${:,.0f}'.format)
-city_table['Share %'] = city_table['Share %'].map('{:.1f}%'.format)
-city_table = city_table[['Rank', 'City', 'Total Sales', 'Share %']]
-
-st.dataframe(city_table, use_container_width=True, hide_index=True)
