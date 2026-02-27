@@ -298,6 +298,7 @@ _region_meta = {
 
 # ── Region cards ─────────────────────────────────────────────────────────
 import streamlit.components.v1 as _stcv1
+import json as _json
 
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
@@ -308,11 +309,13 @@ for _idx, _row in _all_region_stats.iterrows():
     _icon    = _region_meta[_region][0]
     _is_act  = _region in st.session_state.sel_region_card
     _check   = "  ✓" if _is_act else ""
-    _slug    = _region.lower().replace(' ', '-')
     _label   = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
+    # Unique marker per card so JS can find the button
+    _marker_id = f"rcard-marker-{_region.lower().replace(' ','-')}"
 
     with _rc_cols[_idx]:
-        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
+        # Invisible marker so JS can locate this column
+        st.markdown(f'<span id="{_marker_id}" style="display:none"></span>', unsafe_allow_html=True)
         if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
@@ -321,7 +324,6 @@ for _idx, _row in _all_region_stats.iterrows():
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
@@ -330,92 +332,106 @@ if st.session_state.sel_region_card:
             st.session_state.sel_region_card = []
             st.rerun()
 
-# JS: directly set inline styles on each button (bypasses Streamlit CSS conflicts)
-_card_js_data = []
+# JS: find each button via its marker's parent column, inject inline styles + glow
+_js_data = []
 for _, _r in _all_region_stats.iterrows():
     _reg  = _r['Region']
     _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
     _act  = _reg in st.session_state.sel_region_card
     _slug = _reg.lower().replace(' ', '-')
-    _card_js_data.append({
-        'slug': _slug, 'bg1': _bg1, 'bg2': _bg2,
-        'border': _border, 'accent': _accent, 'active': str(_act).lower()
-    })
+    _js_data.append({'id': f'rcard-marker-{_slug}', 'bg1': _bg1, 'bg2': _bg2,
+                     'border': _border, 'accent': _accent, 'active': _act})
 
-import json as _json
-_js_cards = _json.dumps(_card_js_data)
-
-_stcv1.html(f"""
-<script>
+_stcv1.html(f"""<script>
 (function() {{
-  var cards = {_js_cards};
-
-  function styleCards() {{
+  var cards = {_json.dumps(_js_data)};
+  function applyStyles() {{
     var doc = window.parent.document;
     cards.forEach(function(c) {{
-      var wrap = doc.querySelector('.rcard-' + c.slug);
-      if (!wrap) return;
-      var btn = wrap.querySelector('button');
+      var marker = doc.getElementById(c.id);
+      if (!marker) return;
+      // Walk up to find the stVerticalBlock column container
+      var col = marker;
+      for (var i = 0; i < 10; i++) {{
+        if (!col.parentElement) break;
+        col = col.parentElement;
+        var testid = col.getAttribute('data-testid');
+        if (testid === 'column' || testid === 'stVerticalBlock') break;
+      }}
+      // Find the button in this column (skip marker, get first real button)
+      var btn = null;
+      var btns = col.querySelectorAll('button');
+      btns.forEach(function(b) {{
+        if (!btn && b.textContent.trim().length > 2) btn = b;
+      }});
       if (!btn) return;
-      var isAct = c.active === 'true';
-      // Core card style
-      btn.style.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
-      btn.style.setProperty('border', (isAct ? '3px' : '1.5px') + ' solid ' + c.border, 'important');
-      btn.style.setProperty('border-radius', '16px', 'important');
-      btn.style.setProperty('color', c.accent, 'important');
-      btn.style.setProperty('min-height', '130px', 'important');
-      btn.style.setProperty('height', 'auto', 'important');
-      btn.style.setProperty('width', '100%', 'important');
-      btn.style.setProperty('padding', '18px 12px 14px', 'important');
-      btn.style.setProperty('font-size', '0.85rem', 'important');
-      btn.style.setProperty('white-space', 'pre-line', 'important');
-      btn.style.setProperty('line-height', '1.8', 'important');
-      btn.style.setProperty('opacity', isAct ? '1' : '0.72', 'important');
-      btn.style.setProperty('cursor', 'pointer', 'important');
-      btn.style.setProperty('text-align', 'center', 'important');
-      btn.style.setProperty('transition', 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s', 'important');
-      // Inject keyframe + apply animation when active
-      var animId = 'pulse-' + c.slug;
-      if (isAct) {{
-        if (!doc.getElementById('kf-' + animId)) {{
-          var style = doc.createElement('style');
-          style.id = 'kf-' + animId;
-          style.textContent = '@keyframes ' + animId + ' {{' +
-            '0%,100% {{ box-shadow: 0 0 14px ' + c.border + '99, 0 0 30px ' + c.border + '44, 0 4px 14px rgba(0,0,0,0.5); }}' +
-            '50%      {{ box-shadow: 0 0 28px ' + c.border + 'ff, 0 0 55px ' + c.border + '88, 0 6px 22px rgba(0,0,0,0.6); }}' +
+      if (btn._styledByRcard) return; // already styled this session
+      btn._styledByRcard = true;
+
+      // Apply base styles
+      var s = btn.style;
+      s.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
+      s.setProperty('border-radius', '16px', 'important');
+      s.setProperty('color', c.accent, 'important');
+      s.setProperty('min-height', '130px', 'important');
+      s.setProperty('height', 'auto', 'important');
+      s.setProperty('width', '100%', 'important');
+      s.setProperty('padding', '18px 12px 14px', 'important');
+      s.setProperty('font-size', '0.85rem', 'important');
+      s.setProperty('white-space', 'pre-line', 'important');
+      s.setProperty('line-height', '1.8', 'important');
+      s.setProperty('cursor', 'pointer', 'important');
+      s.setProperty('text-align', 'center', 'important');
+      s.setProperty('transition', 'transform 0.2s ease, opacity 0.2s', 'important');
+
+      if (c.active) {{
+        s.setProperty('border', '3px solid ' + c.border, 'important');
+        s.setProperty('opacity', '1', 'important');
+        // Inject keyframe
+        var kfId = 'kf-rcard-' + c.id;
+        if (!doc.getElementById(kfId)) {{
+          var kf = doc.createElement('style');
+          kf.id = kfId;
+          kf.textContent = '@keyframes ' + kfId + ' {{' +
+            '0%,100%{{box-shadow:0 0 12px ' + c.border + '88,0 0 28px ' + c.border + '33,0 3px 12px rgba(0,0,0,.5)}}' +
+            '50%{{box-shadow:0 0 26px ' + c.border + 'ff,0 0 52px ' + c.border + '99,0 5px 20px rgba(0,0,0,.6)}}' +
           '}}';
-          doc.head.appendChild(style);
+          doc.head.appendChild(kf);
         }}
-        btn.style.setProperty('animation', animId + ' 2s ease-in-out infinite', 'important');
+        s.setProperty('animation', kfId + ' 2s ease-in-out infinite', 'important');
       }} else {{
-        btn.style.setProperty('animation', 'none', 'important');
-        btn.style.setProperty('box-shadow', '0 2px 12px rgba(0,0,0,0.4)', 'important');
+        s.setProperty('border', '1.5px solid ' + c.border, 'important');
+        s.setProperty('opacity', '0.72', 'important');
+        s.setProperty('box-shadow', '0 2px 12px rgba(0,0,0,.4)', 'important');
+        s.setProperty('animation', 'none', 'important');
       }}
-      // hover
-      if (!btn._rcardHover) {{
-        btn._rcardHover = true;
-        btn.addEventListener('mouseenter', function() {{
-          btn.style.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
-          btn.style.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc, 0 10px 26px rgba(0,0,0,0.5)', 'important');
-          btn.style.setProperty('animation', 'none', 'important');
-          btn.style.setProperty('opacity', '1', 'important');
-        }});
-        btn.addEventListener('mouseleave', function() {{
-          btn.style.setProperty('transform', '', 'important');
-        }});
-      }}
+
+      btn.addEventListener('mouseenter', function() {{
+        s.setProperty('opacity', '1', 'important');
+        s.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
+        s.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc,0 10px 26px rgba(0,0,0,.55)', 'important');
+        s.setProperty('animation', 'none', 'important');
+      }});
+      btn.addEventListener('mouseleave', function() {{
+        s.setProperty('transform', '', 'important');
+        if (c.active) {{
+          s.setProperty('animation', 'kf-rcard-' + c.id + ' 2s ease-in-out infinite', 'important');
+        }}
+      }});
     }});
   }}
 
-  styleCards();
-  new MutationObserver(styleCards).observe(
-    window.parent.document.body, {{childList: true, subtree: true}}
-  );
+  applyStyles();
+  new MutationObserver(function(muts) {{
+    muts.forEach(function(m) {{
+      if (m.addedNodes.length) {{ applyStyles(); }}
+    }});
+  }}).observe(window.parent.document.body, {{childList:true, subtree:true}});
 }})();
-</script>
-""", height=0)
+</script>""", height=0)
 
 st.markdown("---")
+
 
 
 
