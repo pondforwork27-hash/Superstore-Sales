@@ -296,56 +296,8 @@ _region_meta = {
     'South':   ('🌴', '#1e0f38', '#5a35a8', '#9f7aea', '#d6bcfa'),
 }
 
-# ── Region cards: styled st.button with glow ─────────────────────────────
-_css_parts = ["<style>"]
-for _, _r in _all_region_stats.iterrows():
-    _reg = _r['Region']
-    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _act  = _reg in st.session_state.sel_region_card
-    _bw   = '3px' if _act else '1.5px'
-    _op   = '1.0' if _act else '0.72'
-    _slug = _reg.lower().replace(' ', '-')
-    # Glow: pulsing animation when active
-    _anim = f'rcard-pulse-{_slug}' if _act else 'none'
-    if _act:
-        _css_parts.append(f"""
-@keyframes {_anim} {{
-  0%,100% {{ box-shadow: 0 0 18px {_border}99, 0 0 40px {_border}44, 0 4px 16px rgba(0,0,0,0.5); }}
-  50%      {{ box-shadow: 0 0 28px {_border}ee, 0 0 60px {_border}77, 0 4px 20px rgba(0,0,0,0.6); }}
-}}""")
-    _glow_val = f'animation: {_anim} 2s ease-in-out infinite !important;' if _act else f'box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;'
-    _css_parts.append(f"""
-.rcard-{_slug} button,
-.rcard-{_slug} > div button,
-.rcard-{_slug} > div > div > button {{
-    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
-    border: {_bw} solid {_border} !important;
-    border-radius: 16px !important;
-    color: {_accent} !important;
-    min-height: 130px !important;
-    height: auto !important;
-    width: 100% !important;
-    padding: 18px 12px 14px !important;
-    font-size: 0.85rem !important;
-    white-space: pre-line !important;
-    line-height: 1.8 !important;
-    opacity: {_op} !important;
-    {_glow_val}
-    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease !important;
-    cursor: pointer !important;
-    text-align: center !important;
-}}
-.rcard-{_slug} button:hover,
-.rcard-{_slug} > div button:hover,
-.rcard-{_slug} > div > div > button:hover {{
-    opacity: 1.0 !important;
-    transform: translateY(-4px) scale(1.02) !important;
-    box-shadow: 0 0 28px {_border}cc, 0 8px 24px rgba(0,0,0,0.5) !important;
-    border-color: {_accent} !important;
-    animation: none !important;
-}}""")
-_css_parts.append("</style>")
-st.markdown("".join(_css_parts), unsafe_allow_html=True)
+# ── Region cards ─────────────────────────────────────────────────────────
+import streamlit.components.v1 as _stcv1
 
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
@@ -378,7 +330,93 @@ if st.session_state.sel_region_card:
             st.session_state.sel_region_card = []
             st.rerun()
 
+# JS: directly set inline styles on each button (bypasses Streamlit CSS conflicts)
+_card_js_data = []
+for _, _r in _all_region_stats.iterrows():
+    _reg  = _r['Region']
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _act  = _reg in st.session_state.sel_region_card
+    _slug = _reg.lower().replace(' ', '-')
+    _card_js_data.append({
+        'slug': _slug, 'bg1': _bg1, 'bg2': _bg2,
+        'border': _border, 'accent': _accent, 'active': str(_act).lower()
+    })
+
+import json as _json
+_js_cards = _json.dumps(_card_js_data)
+
+_stcv1.html(f"""
+<script>
+(function() {{
+  var cards = {_js_cards};
+
+  function styleCards() {{
+    var doc = window.parent.document;
+    cards.forEach(function(c) {{
+      var wrap = doc.querySelector('.rcard-' + c.slug);
+      if (!wrap) return;
+      var btn = wrap.querySelector('button');
+      if (!btn) return;
+      var isAct = c.active === 'true';
+      // Core card style
+      btn.style.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
+      btn.style.setProperty('border', (isAct ? '3px' : '1.5px') + ' solid ' + c.border, 'important');
+      btn.style.setProperty('border-radius', '16px', 'important');
+      btn.style.setProperty('color', c.accent, 'important');
+      btn.style.setProperty('min-height', '130px', 'important');
+      btn.style.setProperty('height', 'auto', 'important');
+      btn.style.setProperty('width', '100%', 'important');
+      btn.style.setProperty('padding', '18px 12px 14px', 'important');
+      btn.style.setProperty('font-size', '0.85rem', 'important');
+      btn.style.setProperty('white-space', 'pre-line', 'important');
+      btn.style.setProperty('line-height', '1.8', 'important');
+      btn.style.setProperty('opacity', isAct ? '1' : '0.72', 'important');
+      btn.style.setProperty('cursor', 'pointer', 'important');
+      btn.style.setProperty('text-align', 'center', 'important');
+      btn.style.setProperty('transition', 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s', 'important');
+      // Inject keyframe + apply animation when active
+      var animId = 'pulse-' + c.slug;
+      if (isAct) {{
+        if (!doc.getElementById('kf-' + animId)) {{
+          var style = doc.createElement('style');
+          style.id = 'kf-' + animId;
+          style.textContent = '@keyframes ' + animId + ' {{' +
+            '0%,100% {{ box-shadow: 0 0 14px ' + c.border + '99, 0 0 30px ' + c.border + '44, 0 4px 14px rgba(0,0,0,0.5); }}' +
+            '50%      {{ box-shadow: 0 0 28px ' + c.border + 'ff, 0 0 55px ' + c.border + '88, 0 6px 22px rgba(0,0,0,0.6); }}' +
+          '}}';
+          doc.head.appendChild(style);
+        }}
+        btn.style.setProperty('animation', animId + ' 2s ease-in-out infinite', 'important');
+      }} else {{
+        btn.style.setProperty('animation', 'none', 'important');
+        btn.style.setProperty('box-shadow', '0 2px 12px rgba(0,0,0,0.4)', 'important');
+      }}
+      // hover
+      if (!btn._rcardHover) {{
+        btn._rcardHover = true;
+        btn.addEventListener('mouseenter', function() {{
+          btn.style.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
+          btn.style.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc, 0 10px 26px rgba(0,0,0,0.5)', 'important');
+          btn.style.setProperty('animation', 'none', 'important');
+          btn.style.setProperty('opacity', '1', 'important');
+        }});
+        btn.addEventListener('mouseleave', function() {{
+          btn.style.setProperty('transform', '', 'important');
+        }});
+      }}
+    }});
+  }}
+
+  styleCards();
+  new MutationObserver(styleCards).observe(
+    window.parent.document.body, {{childList: true, subtree: true}}
+  );
+}})();
+</script>
+""", height=0)
+
 st.markdown("---")
+
 
 
 # ── MAP ───────────────────────────────────────────────────────────────────────
