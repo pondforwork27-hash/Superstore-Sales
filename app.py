@@ -3,420 +3,735 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from datetime import datetime
+import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Geographic Sales Insights",
-    page_icon="🗺️",
-    layout="wide"
+    page_title="Superstore Sales Analytics",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# ── CSS ─────────────────────────────────────────────────────────────────────
+# ── Enhanced CSS with animations ─────────────────────────────────────────────
 st.markdown("""
 <style>
-#filter-spacer { display: block; }
-.filter-bar {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 40%, #1e3a5f 100%);
-    border: 1px solid #2d4a6b;
-    border-bottom: 1px solid rgba(66,153,225,0.25);
-    border-radius: 0 0 14px 14px;
-    padding: 12px 20px 10px 20px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.55);
-    position: relative; overflow: hidden;
-}
-.filter-bar label { color: #ffffff !important; font-size: 0.75rem !important; font-weight: 600 !important; }
-.filter-bar [data-baseweb="select"] input { color: #ffffff !important; }
-.filter-bar [data-baseweb="select"] input::placeholder { color: #ffffff !important; opacity: 1 !important; }
-.filter-bar [data-baseweb="select"] [class$="placeholder"],
-.filter-bar [data-baseweb="select"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
-[data-testid="stMultiSelect"] [class*="placeholder"] { color: #ffffff !important; opacity: 1 !important; }
-
-span[data-baseweb="tag"] {
-    background: linear-gradient(135deg, #1e3a5f, #2d5a8a) !important;
-    border: 1px solid #4299e1 !important;
-    border-radius: 20px !important;
-    color: #e2f0fb !important;
-}
-span[data-baseweb="tag"] span { color: #e2f0fb !important; }
-span[data-baseweb="tag"] [role="presentation"] svg { fill: #90cdf4 !important; }
-[data-baseweb="select"] > div {
-    background: rgba(13,27,42,0.85) !important;
-    border: 1px solid #2d5a8a !important;
-    border-radius: 8px !important;
-}
-[data-baseweb="select"] > div:focus-within { border-color: #4299e1 !important; box-shadow: 0 0 0 2px rgba(66,153,225,0.25) !important; }
-[data-baseweb="popover"] ul { background: #0d1b2a !important; border: 1px solid #2d5a8a !important; }
-[data-baseweb="popover"] li { color: #cbd5e0 !important; }
-[data-baseweb="popover"] li:hover { background: #1e3a5f !important; color: #fff !important; }
-[data-baseweb="popover"] li[aria-selected="true"] { background: #1a3a6b !important; color: #90cdf4 !important; }
-
-.filter-bar::before {
-    content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
-    background: radial-gradient(circle at 15% 60%, rgba(66,153,225,0.07) 0%, transparent 55%),
-                radial-gradient(circle at 85% 20%, rgba(99,179,237,0.05) 0%, transparent 45%);
-    pointer-events: none;
-}
-.filter-title { font-size: 0.68rem; font-weight: 700; color: #63b3ed; text-transform: uppercase; letter-spacing: 0.13em; margin-bottom: 8px; }
-.active-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:2px; }
-.pill { display:inline-flex; align-items:center; gap:5px; background:rgba(30,58,95,0.9); border:1px solid #2d5a8a; border-radius:16px; padding:3px 10px; font-size:0.73rem; color:#90cdf4; }
-.pill.state { border-color:#e94560; color:#feb2b2; }
-.state-badge { display:inline-flex; align-items:center; gap:8px; background:linear-gradient(90deg,#1e3a5f,#2d5a8a); border:1px solid #4299e1; border-radius:20px; padding:5px 14px; font-size:0.8rem; color:#90cdf4; margin-bottom:10px; }
-.state-badge strong { color:#fff; }
-
-.insight-card { background:linear-gradient(135deg,#0d1b2a 0%,#1b2a3b 100%); border-left:4px solid #4299e1; border-radius:8px; padding:14px 18px; margin-bottom:10px; color:#f0f0f0; }
-.insight-card.warn  { border-left-color:#ed8936; }
-.insight-card.good  { border-left-color:#48bb78; }
-.insight-card.alert { border-left-color:#e94560; }
-.insight-card .icon { font-size:1.3rem; }
-.insight-card .label { font-size:0.7rem; color:#a0aec0; text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; }
-.insight-card .value { font-size:1.35rem; font-weight:700; color:#fff; }
-.insight-card .detail { font-size:0.82rem; color:#90cdf4; margin-top:3px; line-height:1.5; }
+    /* Global Styles */
+    .main {
+        background: linear-gradient(135deg, #0a0f1a 0%, #0f1a2f 100%);
+    }
+    
+    /* Animated metric cards */
+    .metric-card {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border: 1px solid #2d4a6b;
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(66,153,225,0.2);
+        border-color: #4299e1;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+    }
+    
+    .metric-label {
+        font-size: 0.85rem;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    /* Insight cards */
+    .insight-card {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border-left: 4px solid #4299e1;
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 12px;
+        color: #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    
+    .insight-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    
+    .insight-card.warn { border-left-color: #ed8936; }
+    .insight-card.good { border-left-color: #48bb78; }
+    .insight-card.alert { border-left-color: #e94560; }
+    
+    .insight-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .insight-label { font-size: 0.75rem; color: #a0aec0; text-transform: uppercase; }
+    .insight-value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .insight-detail { font-size: 0.85rem; color: #90cdf4; }
+    
+    /* Filter bar */
+    .filter-bar {
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b2a3b 100%);
+        border: 1px solid #2d4a6b;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #0d1b2a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #2d4a6b;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #4299e1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Sentinel + JS: true fixed-position filter ─────────────────────────────────
-st.markdown('<span id="filter-sentinel"></span>', unsafe_allow_html=True)
-
-import streamlit.components.v1 as _stc
-_stc.html("""
-<script>
-(function () {
-  var DONE = false;
-  function fixFilter() {
-    if (DONE) return;
-    var sentinel = document.getElementById('filter-sentinel');
-    if (!sentinel) return;
-    var block = sentinel;
-    var found = false;
-    for (var i = 0; i < 12; i++) {
-      if (!block.parentElement) return;
-      block = block.parentElement;
-      if (block.getAttribute('data-testid') === 'stVerticalBlock' && block.querySelector('.filter-bar')) { found = true; break; }
-    }
-    if (!found) return;
-    if (block.getAttribute('data-filter-fixed') === '1') return;
-    block.setAttribute('data-filter-fixed', '1');
-    DONE = true;
-
-    var spacer = document.createElement('div');
-    spacer.id = 'filter-spacer';
-    block.parentNode.insertBefore(spacer, block);
-
-    function applyFixed() {
-      var h = block.scrollHeight;
-      spacer.style.height = h + 'px';
-      var parentRect = block.parentElement.getBoundingClientRect();
-      block.style.cssText = [
-        'position:fixed', 'top:0', 'left:' + parentRect.left + 'px', 'width:' + parentRect.width + 'px',
-        'z-index:9999', 'background:rgba(8,15,26,0.96)', 'backdrop-filter:blur(8px)', '-webkit-backdrop-filter:blur(8px)',
-      ].join(';');
-    }
-    applyFixed();
-    window.addEventListener('resize', applyFixed);
-  }
-  fixFilter();
-  new MutationObserver(function(muts) { muts.forEach(function(m) { if (m.addedNodes.length) fixFilter(); }); }).observe(document.body, { childList: true, subtree: true });
-})();
-</script>
-""", height=0)
-
-
-# ── State Mapping ─────────────────────────────────────────────────────────────
-us_state_to_abbrev = {
-    "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
-    "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
-    "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA",
-    "Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD",
-    "Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO",
-    "Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ",
-    "New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH",
-    "Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC",
-    "South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT",
-    "Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"
-}
-abbrev_to_state = {v: k for k, v in us_state_to_abbrev.items()}
-
-@st.cache_data
+# ── Data Loading and Preprocessing ─────────────────────────────────────────
+@st.cache_data(ttl=3600)
 def load_data():
+    """Load and preprocess Superstore data"""
     df = pd.read_csv('cleaned_train.csv')
-    df['State Code'] = df['State'].map(us_state_to_abbrev)
+    
+    # Convert dates
     df['Order Date'] = pd.to_datetime(df['Order Date'])
-    df['Year']  = df['Order Date'].dt.year
-    df['Month'] = df['Order Date'].dt.to_period('M').astype(str)
+    df['Ship Date'] = pd.to_datetime(df['Ship Date'])
+    
+    # Extract date features
+    df['Year'] = df['Order Date'].dt.year
+    df['Month'] = df['Order Date'].dt.month
+    df['Quarter'] = df['Order Date'].dt.quarter
+    df['DayOfWeek'] = df['Order Date'].dt.day_name()
+    df['Month_Year'] = df['Order Date'].dt.strftime('%b %Y')
+    df['Year_Month'] = df['Order Date'].dt.to_period('M')
+    
+    # Calculate shipping time
+    df['Shipping_Days'] = (df['Ship Date'] - df['Order Date']).dt.days
+    
+    # State mapping for map
+    us_state_to_abbrev = {
+        "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+        "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+        "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+        "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+        "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+        "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+        "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+        "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+        "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+        "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+    }
+    
+    df['State Code'] = df['State'].map(us_state_to_abbrev)
+    
     return df
 
-df = load_data()
-
-# ── Session state init ────────────────────────────────────────────────────────
-defaults = {
-    'clicked_state': None,
-    'clicked_city':  None,
-    'sel_year':      [],
-    'sel_region':    [],
-    'sel_category':  [],
-    'sel_segment':   [],
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-# ── TITLE ─────────────────────────────────────────────────────────────────────
-st.title("🗺️ Regional Sales Intelligence")
-st.caption("Select filters to update all charts instantly. Click a state on the map to drill down.")
-
-# ── STICKY FILTER BAR ─────────────────────────────────────────────────────────
-st.markdown('<div class="sticky-filter-wrap"><div class="filter-bar"><div class="filter-title">🧭 &nbsp;Dashboard Filters</div>', unsafe_allow_html=True)
-
-year_opts     = sorted(df['Year'].unique().tolist(), reverse=True)
-region_opts   = sorted(df['Region'].unique().tolist())
-category_opts = sorted(df['Category'].unique().tolist())
-segment_opts  = sorted(df['Segment'].unique().tolist())
-
-fc0, fc1, fc2, fc3 = st.columns(4)
-
-with fc0:
-    sel_year = st.multiselect("Year", year_opts, default=[v for v in st.session_state.sel_year if v in year_opts], placeholder="All Years")
-with fc1:
-    sel_region = st.multiselect("Region", region_opts, default=[v for v in st.session_state.sel_region if v in region_opts], placeholder="All Regions")
-with fc2:
-    sel_category = st.multiselect("Category", category_opts, default=[v for v in st.session_state.sel_category if v in category_opts], placeholder="All Categories")
-with fc3:
-    sel_segment = st.multiselect("Segment", segment_opts, default=[v for v in st.session_state.sel_segment if v in segment_opts], placeholder="All Segments")
-
-# Sync session state immediately
-st.session_state.sel_year     = list(sel_year)
-st.session_state.sel_region   = list(sel_region)
-st.session_state.sel_category = list(sel_category)
-st.session_state.sel_segment  = list(sel_segment)
-
-# Active filter pills
-pills_html = '<div class="active-pills">'
-cs = st.session_state.clicked_state
-for v in sel_year:     pills_html += f'<div class="pill">📅 {v}</div>'
-for v in sel_region:   pills_html += f'<div class="pill">🌎 {v}</div>'
-for v in sel_category: pills_html += f'<div class="pill">📦 {v}</div>'
-for v in sel_segment:  pills_html += f'<div class="pill">👥 {v}</div>'
-if cs:                 pills_html += f'<div class="pill state">📍 {cs}</div>'
-if not any([sel_year, sel_region, sel_category, sel_segment, cs]):
-    pills_html += '<div class="pill" style="color:#4a7fa5;border-color:#2d4a6b;">Showing all data</div>'
-pills_html += '</div></div></div>'
-st.markdown(pills_html, unsafe_allow_html=True)
-
-# ── MAP CLICK handler ─────────────────────────────────────────────────────────
-if st.session_state.clicked_state:
-    col_badge, col_clear = st.columns([5, 1])
-    with col_badge:
-        st.markdown(f'<div class="state-badge">📍 Map filter active — <strong>{st.session_state.clicked_state}</strong></div>', unsafe_allow_html=True)
-    with col_clear:
-        if st.button("✕ Clear state", use_container_width=True):
-            st.session_state.clicked_state = None
-            st.rerun()
-
-# ── BUILD filtered_df ─────────────────────────────────────────────────────────
-mask = pd.Series([True] * len(df), index=df.index)
-if sel_year:     mask &= df['Year'].isin(sel_year)
-if sel_region:   mask &= df['Region'].isin(sel_region)
-if sel_category: mask &= df['Category'].isin(sel_category)
-if sel_segment:  mask &= df['Segment'].isin(sel_segment)
-if st.session_state.clicked_state: mask &= df['State'] == st.session_state.clicked_state
-if st.session_state.clicked_city:  mask &= df['City']  == st.session_state.clicked_city
-
-filtered_df = df[mask]
-
-if filtered_df.empty:
-    st.warning("No data matches the current filter combination. Try adjusting your selections.")
+try:
+    df = load_data()
+except Exception as e:
+    st.error(f"Error loading data: {str(e)}")
     st.stop()
 
-# ── METRICS ───────────────────────────────────────────────────────────────────
-state_sales   = filtered_df.groupby(['State','State Code'])['Sales'].sum().reset_index()
-cat_sales     = filtered_df.groupby('Category')['Sales'].sum().reset_index()
-subcat_sales  = filtered_df.groupby('Sub-Category')['Sales'].sum().reset_index()
-region_sales  = filtered_df.groupby('Region')['Sales'].sum().reset_index()
-segment_sales = filtered_df.groupby('Segment')['Sales'].sum().reset_index()
-city_sales    = filtered_df.groupby('City')['Sales'].sum().reset_index()
-monthly_sales = filtered_df.groupby('Month')['Sales'].sum().reset_index().sort_values('Month')
-region_seg    = filtered_df.groupby(['Region','Segment'])['Sales'].sum().reset_index()
+# ── Sidebar Filters ────────────────────────────────────────────────────────
+st.sidebar.title("🎯 Dashboard Filters")
+st.sidebar.markdown("---")
 
-total_sales   = filtered_df['Sales'].sum()
-total_orders  = filtered_df['Order ID'].nunique()
-avg_order_val = total_sales / total_orders if total_orders else 0
-
-top_state      = state_sales.sort_values('Sales', ascending=False).iloc[0] if not state_sales.empty else None
-top_city_row   = city_sales.sort_values('Sales', ascending=False).iloc[0] if not city_sales.empty else None
-top_cat_row    = cat_sales.sort_values('Sales', ascending=False).iloc[0] if not cat_sales.empty else None
-top_subcat_row = subcat_sales.sort_values('Sales', ascending=False).iloc[0] if not subcat_sales.empty else None
-top_region_row = region_sales.sort_values('Sales', ascending=False).iloc[0] if not region_sales.empty else None
-top_seg_row    = segment_sales.sort_values('Sales', ascending=False).iloc[0] if not segment_sales.empty else None
-state_share    = (top_state['Sales'] / total_sales * 100) if top_state is not None and total_sales else 0
-
-# ── KPI ───────────────────────────────────────────────────────────────────────
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("💰 Total Sales",     f"${total_sales:,.0f}")
-k2.metric("📦 Total Orders",    f"{total_orders:,}")
-k3.metric("🧾 Avg Order Value", f"${avg_order_val:,.0f}")
-if top_region_row is not None:
-    k4.metric("🏆 #1 Region",       top_region_row['Region'])
-
-st.markdown("---")
-
-# ── MAP ───────────────────────────────────────────────────────────────────────
-st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
-
-all_state_sales = df.groupby(['State','State Code'])['Sales'].sum().reset_index()
-fig_map = px.choropleth(
-    all_state_sales, locations='State Code', locationmode="USA-states",
-    color='Sales', scope="usa", hover_name='State',
-    color_continuous_scale="Blues", labels={'Sales':'Total Sales ($)'},
-    template="plotly_dark"
+# Date range filter
+min_date = df['Order Date'].min()
+max_date = df['Order Date'].max()
+date_range = st.sidebar.date_input(
+    "📅 Date Range",
+    value=[min_date, max_date],
+    min_value=min_date,
+    max_value=max_date
 )
-fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
 
-if st.session_state.clicked_state:
-    hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
-    if not hl.empty:
-        fig_map.add_trace(go.Choropleth(
-            locations=hl['State Code'], z=[1], locationmode="USA-states",
-            colorscale=[[0,"rgba(233,69,96,0)"], [1,"rgba(233,69,96,0)"]],
-            showscale=False, marker_line_color="#e94560",
-            marker_line_width=3, hoverinfo='skip',
-        ))
+if len(date_range) == 2:
+    start_date, end_date = date_range
+    mask = (df['Order Date'] >= pd.Timestamp(start_date)) & (df['Order Date'] <= pd.Timestamp(end_date))
+else:
+    mask = pd.Series([True] * len(df))
 
-fig_map.update_layout(
-    margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-    coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$")
-)
-map_event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="choropleth_map")
+# Categorical filters
+col1, col2 = st.sidebar.columns(2)
 
-if map_event and map_event.selection and map_event.selection.get("points"):
-    pt = map_event.selection["points"][0]
-    clicked_abbrev = pt.get("location")
-    if clicked_abbrev:
-        new_state = abbrev_to_state.get(clicked_abbrev)
-        if new_state and new_state != st.session_state.clicked_state:
-            st.session_state.clicked_state = new_state
-        elif new_state == st.session_state.clicked_state:
-            st.session_state.clicked_state = None
-        st.rerun()
+with col1:
+    selected_regions = st.multiselect(
+        "🌎 Region",
+        options=sorted(df['Region'].unique()),
+        default=[]
+    )
+    
+    selected_segments = st.multiselect(
+        "👥 Segment",
+        options=sorted(df['Segment'].unique()),
+        default=[]
+    )
 
-if top_state is not None:
+with col2:
+    selected_categories = st.multiselect(
+        "📦 Category",
+        options=sorted(df['Category'].unique()),
+        default=[]
+    )
+    
+    selected_ship_modes = st.multiselect(
+        "🚚 Ship Mode",
+        options=sorted(df['Ship Mode'].unique()),
+        default=[]
+    )
+
+# Apply filters
+if selected_regions:
+    mask &= df['Region'].isin(selected_regions)
+if selected_categories:
+    mask &= df['Category'].isin(selected_categories)
+if selected_segments:
+    mask &= df['Segment'].isin(selected_segments)
+if selected_ship_modes:
+    mask &= df['Ship Mode'].isin(selected_ship_modes)
+
+filtered_df = df[mask].copy()
+
+# Quick stats in sidebar
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📊 Quick Stats")
+st.sidebar.metric("Total Records", f"{len(filtered_df):,}")
+st.sidebar.metric("Total Sales", f"${filtered_df['Sales'].sum():,.0f}")
+st.sidebar.metric("Avg Order Value", f"${filtered_df['Sales'].mean():,.2f}")
+
+if filtered_df.empty:
+    st.warning("⚠️ No data matches the selected filters. Please adjust your filters.")
+    st.stop()
+
+# ── Main Dashboard ─────────────────────────────────────────────────────────
+st.title("📊 Superstore Sales Analytics Dashboard")
+st.markdown(f"*Analyzing {len(filtered_df):,} transactions from {filtered_df['Order Date'].min().strftime('%B %Y')} to {filtered_df['Order Date'].max().strftime('%B %Y')}*")
+
+# ── KPI Row ────────────────────────────────────────────────────────────────
+col1, col2, col3, col4, col5 = st.columns(5)
+
+total_sales = filtered_df['Sales'].sum()
+total_orders = filtered_df['Order ID'].nunique()
+avg_order_value = total_sales / total_orders if total_orders > 0 else 0
+total_customers = filtered_df['Customer ID'].nunique()
+avg_shipping = filtered_df['Shipping_Days'].mean()
+
+with col1:
     st.markdown(f"""
-    <div class="insight-card">
-      <div class="icon">📌</div><div class="label">Map Insight</div>
-      <div class="value">{top_state['State']} leads all states</div>
-      <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
-      <strong>{state_share:.1f}%</strong> of total revenue in this selection.
-      Focus distribution and logistics investments here for maximum impact.</div>
+    <div class="metric-card">
+        <div class="metric-label">💰 Total Sales</div>
+        <div class="metric-value">${total_sales:,.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">📦 Total Orders</div>
+        <div class="metric-value">{total_orders:,}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">🧾 Avg Order Value</div>
+        <div class="metric-value">${avg_order_value:,.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">👥 Unique Customers</div>
+        <div class="metric-value">{total_customers:,}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">🚚 Avg Shipping</div>
+        <div class="metric-value">{avg_shipping:.1f} days</div>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ── INSIGHT CARDS ─────────────────────────────────────────────────────────────
-st.header("💡 Key Business Insights")
-c1,c2,c3 = st.columns(3)
-if top_state is not None and top_city_row is not None:
-    with c1:
-        st.markdown(f'<div class="insight-card good"><div class="icon">🏅</div><div class="label">Top State</div><div class="value">{top_state["State"]}</div><div class="detail">${top_state["Sales"]:,.0f} in sales ({state_share:.1f}% of total)</div></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="insight-card"><div class="icon">🏙️</div><div class="label">Top City</div><div class="value">{top_city_row["City"]}</div><div class="detail">${top_city_row["Sales"]:,.0f} — highest city-level revenue driver</div></div>', unsafe_allow_html=True)
-if top_cat_row is not None and top_subcat_row is not None:
-    with c2:
-        st.markdown(f'<div class="insight-card good"><div class="icon">📦</div><div class="label">Dominant Category</div><div class="value">{top_cat_row["Category"]}</div><div class="detail">${top_cat_row["Sales"]:,.0f} — prime candidate for increased marketing spend</div></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="insight-card"><div class="icon">🔖</div><div class="label">Top Sub-Category</div><div class="value">{top_subcat_row["Sub-Category"]}</div><div class="detail">${top_subcat_row["Sales"]:,.0f} — highest-earning product sub-group</div></div>', unsafe_allow_html=True)
-if top_seg_row is not None and top_region_row is not None:
-    with c3:
-        st.markdown(f'<div class="insight-card good"><div class="icon">👥</div><div class="label">Leading Segment</div><div class="value">{top_seg_row["Segment"]}</div><div class="detail">${top_seg_row["Sales"]:,.0f} — your most valuable customer segment</div></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="insight-card"><div class="icon">🌎</div><div class="label">Top Region</div><div class="value">{top_region_row["Region"]}</div><div class="detail">${top_region_row["Sales"]:,.0f} — strongest regional market</div></div>', unsafe_allow_html=True)
+# ── Sales Overview ─────────────────────────────────────────────────────────
+st.header("📈 Sales Overview")
+
+tab1, tab2, tab3 = st.tabs(["📅 Time Series", "🏷️ Category Analysis", "🌍 Geographic"])
+
+with tab1:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Monthly sales trend
+        monthly_sales = filtered_df.groupby('Month_Year')['Sales'].sum().reset_index()
+        
+        fig_monthly = px.line(
+            monthly_sales,
+            x='Month_Year',
+            y='Sales',
+            title='Monthly Sales Trend',
+            markers=True
+        )
+        fig_monthly.update_traces(
+            line_color='#4299e1',
+            line_width=3,
+            marker=dict(size=8, color='#90cdf4')
+        )
+        fig_monthly.update_layout(
+            xaxis_title='',
+            yaxis_title='Sales ($)',
+            height=400,
+            hovermode='x unified'
+        )
+        st.plotly_chart(fig_monthly, use_container_width=True)
+    
+    with col2:
+        # Sales by day of week
+        dow_sales = filtered_df.groupby('DayOfWeek')['Sales'].sum().reset_index()
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        dow_sales['DayOfWeek'] = pd.Categorical(dow_sales['DayOfWeek'], categories=day_order, ordered=True)
+        dow_sales = dow_sales.sort_values('DayOfWeek')
+        
+        fig_dow = px.bar(
+            dow_sales,
+            x='DayOfWeek',
+            y='Sales',
+            title='Sales by Day of Week',
+            color='Sales',
+            color_continuous_scale='Blues'
+        )
+        fig_dow.update_layout(
+            xaxis_title='',
+            yaxis_title='Sales ($)',
+            height=400,
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_dow, use_container_width=True)
+
+with tab2:
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Category distribution
+        cat_sales = filtered_df.groupby('Category')['Sales'].sum().reset_index()
+        
+        fig_cat = px.pie(
+            cat_sales,
+            values='Sales',
+            names='Category',
+            title='Sales by Category',
+            color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1'],
+            hole=0.4
+        )
+        fig_cat.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hovertemplate='<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percent}<extra></extra>'
+        )
+        fig_cat.update_layout(height=350, showlegend=False)
+        st.plotly_chart(fig_cat, use_container_width=True)
+    
+    with col2:
+        # Top sub-categories
+        subcat_sales = filtered_df.groupby('Sub-Category')['Sales'].sum().reset_index()
+        subcat_sales = subcat_sales.nlargest(10, 'Sales')
+        
+        fig_subcat = px.bar(
+            subcat_sales,
+            x='Sales',
+            y='Sub-Category',
+            orientation='h',
+            title='Top 10 Sub-Categories',
+            color='Sales',
+            color_continuous_scale='Blues'
+        )
+        fig_subcat.update_layout(
+            yaxis={'categoryorder': 'total ascending'},
+            xaxis_title='Sales ($)',
+            height=350,
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_subcat, use_container_width=True)
+    
+    with col3:
+        # Segment distribution
+        seg_sales = filtered_df.groupby('Segment')['Sales'].sum().reset_index()
+        
+        fig_seg = px.bar(
+            seg_sales,
+            x='Segment',
+            y='Sales',
+            title='Sales by Customer Segment',
+            color='Segment',
+            color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1']
+        )
+        fig_seg.update_layout(
+            xaxis_title='',
+            yaxis_title='Sales ($)',
+            height=350,
+            showlegend=False
+        )
+        st.plotly_chart(fig_seg, use_container_width=True)
+
+with tab3:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # State-wise sales map
+        state_sales = filtered_df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
+        
+        fig_map = px.choropleth(
+            state_sales,
+            locations='State Code',
+            locationmode="USA-states",
+            color='Sales',
+            scope="usa",
+            hover_name='State',
+            color_continuous_scale=[[0, '#0d1b2a'], [0.3, '#1e3a5f'], [0.6, '#2b6cb0'], [1, '#90cdf4']],
+            title='Sales by State'
+        )
+        fig_map.update_layout(
+            height=400,
+            margin={"r":0,"t":30,"l":0,"b":0},
+            coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$")
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
+    
+    with col2:
+        # Top states bar chart
+        top_states = state_sales.nlargest(10, 'Sales')
+        
+        fig_top_states = px.bar(
+            top_states,
+            x='Sales',
+            y='State',
+            orientation='h',
+            title='Top 10 States by Sales',
+            color='Sales',
+            color_continuous_scale='Blues'
+        )
+        fig_top_states.update_layout(
+            yaxis={'categoryorder': 'total ascending'},
+            xaxis_title='Sales ($)',
+            height=400,
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_top_states, use_container_width=True)
 
 st.markdown("---")
 
-# ── PERFORMANCE BREAKDOWN ─────────────────────────────────────────────────────
-st.header("📊 Performance Breakdown")
+# ── Shipping Analysis ──────────────────────────────────────────────────────
+st.header("🚚 Shipping Performance")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    # Shipping mode distribution
+    ship_counts = filtered_df['Ship Mode'].value_counts().reset_index()
+    ship_counts.columns = ['Ship Mode', 'Count']
+    
+    fig_ship = px.pie(
+        ship_counts,
+        values='Count',
+        names='Ship Mode',
+        title='Shipping Mode Distribution',
+        color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1', '#90cdf4']
+    )
+    fig_ship.update_traces(textposition='inside', textinfo='percent+label')
+    fig_ship.update_layout(height=350)
+    st.plotly_chart(fig_ship, use_container_width=True)
+
+with col2:
+    # Average shipping days by ship mode
+    ship_days = filtered_df.groupby('Ship Mode')['Shipping_Days'].mean().reset_index()
+    ship_days = ship_days.sort_values('Shipping_Days', ascending=False)
+    
+    fig_ship_days = px.bar(
+        ship_days,
+        x='Ship Mode',
+        y='Shipping_Days',
+        title='Average Shipping Time by Mode',
+        color='Shipping_Days',
+        color_continuous_scale='Blues'
+    )
+    fig_ship_days.update_layout(
+        xaxis_title='',
+        yaxis_title='Days',
+        height=350,
+        coloraxis_showscale=False
+    )
+    st.plotly_chart(fig_ship_days, use_container_width=True)
+
+with col3:
+    # Sales by shipping mode
+    ship_sales = filtered_df.groupby('Ship Mode')['Sales'].sum().reset_index()
+    ship_sales = ship_sales.sort_values('Sales', ascending=False)
+    
+    fig_ship_sales = px.bar(
+        ship_sales,
+        x='Ship Mode',
+        y='Sales',
+        title='Sales by Shipping Mode',
+        color='Sales',
+        color_continuous_scale='Blues'
+    )
+    fig_ship_sales.update_layout(
+        xaxis_title='',
+        yaxis_title='Sales ($)',
+        height=350,
+        coloraxis_showscale=False
+    )
+    st.plotly_chart(fig_ship_sales, use_container_width=True)
+
+st.markdown("---")
+
+# ── Customer Analysis ──────────────────────────────────────────────────────
+st.header("👥 Customer Insights")
+
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Top 10 States by Sales")
-    top_states_df = state_sales.sort_values('Sales', ascending=False).head(10)
-    fig_bar = px.bar(
-        top_states_df, x='Sales', y='State', orientation='h',
-        color='Sales', color_continuous_scale='Blues', labels={'Sales':'Total Sales ($)'},
-        text_auto=".2s", template="plotly_dark"
+    # Top customers
+    customer_sales = filtered_df.groupby('Customer Name').agg({
+        'Sales': 'sum',
+        'Order ID': 'nunique'
+    }).reset_index()
+    customer_sales.columns = ['Customer', 'Total Sales', 'Order Count']
+    customer_sales = customer_sales.nlargest(10, 'Total Sales')
+    
+    fig_customers = px.bar(
+        customer_sales,
+        x='Total Sales',
+        y='Customer',
+        orientation='h',
+        title='Top 10 Customers by Sales',
+        color='Total Sales',
+        color_continuous_scale='Blues'
     )
-    fig_bar.update_traces(hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>", textposition="outside")
-    fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, coloraxis_showscale=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig_bar, use_container_width=True, key="bar_states")
+    fig_customers.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        xaxis_title='Sales ($)',
+        height=400,
+        coloraxis_showscale=False
+    )
+    st.plotly_chart(fig_customers, use_container_width=True)
 
 with col2:
-    st.subheader("Category & Segment Mix")
-    _sun_df = filtered_df.groupby(['Category','Segment'])['Sales'].sum().reset_index()
-    _sun_cmap = {
-        "Consumer": "#1a56a0", "Corporate": "#4299e1", "Home Office": "#90cdf4",
-        "Furniture": "#1a365d", "Office Supplies": "#1e4a6e", "Technology": "#17364f", "(?)": "#0d1b2a",
-    }
-    fig_sun = px.sunburst(_sun_df, path=['Category','Segment'], values='Sales', color='Segment', color_discrete_map=_sun_cmap, template="plotly_dark")
-    fig_sun.update_traces(
-        hovertemplate="<b>%{label}</b><br>Sales: $%{value:,.0f}<br>Share: %{percentParent:.1%}<extra></extra>",
-        textfont=dict(size=11), insidetextorientation='radial',
-        marker=dict(colors=[_sun_cmap.get(lbl, "#1e3a5f") for lbl in fig_sun.data[0].labels])
+    # Customer order frequency
+    order_freq = filtered_df.groupby('Customer ID')['Order ID'].nunique().reset_index()
+    order_freq.columns = ['Customer ID', 'Order Count']
+    
+    freq_dist = order_freq['Order Count'].value_counts().reset_index()
+    freq_dist.columns = ['Orders per Customer', 'Number of Customers']
+    freq_dist = freq_dist.sort_values('Orders per Customer')
+    
+    fig_freq = px.bar(
+        freq_dist,
+        x='Orders per Customer',
+        y='Number of Customers',
+        title='Customer Order Frequency Distribution',
+        color='Number of Customers',
+        color_continuous_scale='Blues'
     )
-    fig_sun.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5, font=dict(size=11)))
-    st.plotly_chart(fig_sun, use_container_width=True, key="sunburst_cat")
+    fig_freq.update_layout(
+        xaxis_title='Number of Orders',
+        yaxis_title='Number of Customers',
+        height=400,
+        coloraxis_showscale=False
+    )
+    st.plotly_chart(fig_freq, use_container_width=True)
 
 st.markdown("---")
 
-# ── TRENDS & CORRELATION ──────────────────────────────────────────────────────
-st.header("📈 Sales Trends & Insights")
-col3, col4 = st.columns([1.5, 1])
+# ── Product Performance ────────────────────────────────────────────────────
+st.header("📦 Product Analysis")
 
-with col3:
-    st.subheader("Monthly Revenue Growth")
-    # Swapped to an area chart for a more modern "dashboard" look
-    monthly_sales['label'] = monthly_sales['Sales'].apply(lambda v: f"${v/1000:.0f}K" if v >= 1000 else f"${v:.0f}")
-    fig_line = px.area(
-        monthly_sales, x='Month', y='Sales', markers=True,
-        labels={'Sales':'Total Sales ($)','Month':''}, template="plotly_dark"
-    )
-    fig_line.update_traces(
-        line_color='#4299e1', fillcolor='rgba(66, 153, 225, 0.2)',
-        marker=dict(size=6, color='#90cdf4'),
-        hovertemplate="<b>%{x}</b><br>Sales: $%{y:,.0f}<extra></extra>"
-    )
-    fig_line.update_layout(
-        xaxis_tickangle=-45, yaxis=dict(tickprefix="$", tickformat=",.0f"),
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig_line, use_container_width=True, key="line_trend")
+col1, col2 = st.columns(2)
 
-with col4:
-    st.subheader("Sub-Category Ranking")
-    subcat_sorted = subcat_sales.sort_values('Sales', ascending=True).tail(8) # Show top 8 for clean UI
-    fig_subcat = px.bar(
-        subcat_sorted, x='Sales', y='Sub-Category', orientation='h',
-        color='Sales', color_continuous_scale='Teal', labels={'Sales':'Total Sales ($)'},
-        text_auto=".2s", template="plotly_dark"
+with col1:
+    # Product sub-category performance
+    subcat_stats = filtered_df.groupby('Sub-Category').agg({
+        'Sales': 'sum',
+        'Quantity': 'sum',
+        'Order ID': 'nunique'
+    }).reset_index()
+    subcat_stats['Avg Price'] = subcat_stats['Sales'] / subcat_stats['Quantity']
+    subcat_stats = subcat_stats.sort_values('Sales', ascending=False)
+    
+    fig_subcat_perf = px.scatter(
+        subcat_stats.head(15),
+        x='Quantity',
+        y='Sales',
+        size='Avg Price',
+        color='Sub-Category',
+        title='Sub-Category Performance (Top 15)',
+        hover_data=['Avg Price']
     )
-    fig_subcat.update_traces(hovertemplate="<b>%{y}</b><br>Sales: $%{x:,.0f}<extra></extra>", textposition="outside")
-    fig_subcat.update_layout(coloraxis_showscale=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig_subcat, use_container_width=True, key="bar_subcat")
+    fig_subcat_perf.update_layout(height=500)
+    st.plotly_chart(fig_subcat_perf, use_container_width=True)
+
+with col2:
+    # Heatmap of Category vs Segment
+    cat_seg_pivot = filtered_df.pivot_table(
+        values='Sales',
+        index='Category',
+        columns='Segment',
+        aggfunc='sum',
+        fill_value=0
+    )
+    
+    fig_heatmap = go.Figure(data=go.Heatmap(
+        z=cat_seg_pivot.values,
+        x=cat_seg_pivot.columns,
+        y=cat_seg_pivot.index,
+        colorscale='Blues',
+        text=[[f"${v:,.0f}" for v in row] for row in cat_seg_pivot.values],
+        texttemplate='%{text}',
+        textfont=dict(size=10, color='white'),
+        hovertemplate='<b>%{y}</b> × <b>%{x}</b><br>Sales: $%{z:,.0f}<extra></extra>'
+    ))
+    
+    fig_heatmap.update_layout(
+        title='Sales Matrix: Category × Segment',
+        height=500,
+        xaxis_title='',
+        yaxis_title=''
+    )
+    st.plotly_chart(fig_heatmap, use_container_width=True)
 
 st.markdown("---")
 
-# ── CITIES TABLE ────────────────────────────────────────────────────────────
-st.header("🏙️ Cities by Revenue")
+# ── Regional Analysis ──────────────────────────────────────────────────────
+st.header("🌎 Regional Performance")
 
-# Using streamlit's native column config format keeps the underlying data numeric (enabling column sorting!)
-city_table = filtered_df.groupby('City')['Sales'].sum().reset_index()
-city_table = city_table.sort_values('Sales', ascending=False).reset_index(drop=True)
-city_table.index += 1
-city_table.insert(0, 'Rank', city_table.index)
-city_table['Share %'] = (city_table['Sales'] / city_table['Sales'].sum() * 100).round(2)
+col1, col2 = st.columns(2)
+
+with col1:
+    # Region performance
+    region_stats = filtered_df.groupby('Region').agg({
+        'Sales': 'sum',
+        'Order ID': 'nunique',
+        'Customer ID': 'nunique'
+    }).reset_index()
+    
+    fig_region = px.bar(
+        region_stats,
+        x='Region',
+        y='Sales',
+        title='Sales by Region',
+        color='Sales',
+        color_continuous_scale='Blues',
+        hover_data=['Order ID', 'Customer ID']
+    )
+    fig_region.update_layout(
+        xaxis_title='',
+        yaxis_title='Sales ($)',
+        height=400,
+        coloraxis_showscale=False
+    )
+    st.plotly_chart(fig_region, use_container_width=True)
+
+with col2:
+    # Region vs Category
+    region_cat = filtered_df.groupby(['Region', 'Category'])['Sales'].sum().reset_index()
+    
+    fig_region_cat = px.bar(
+        region_cat,
+        x='Region',
+        y='Sales',
+        color='Category',
+        title='Sales by Region and Category',
+        barmode='group',
+        color_discrete_sequence=['#1e3a5f', '#2b6cb0', '#4299e1']
+    )
+    fig_region_cat.update_layout(
+        xaxis_title='',
+        yaxis_title='Sales ($)',
+        height=400,
+        legend_title='Category'
+    )
+    st.plotly_chart(fig_region_cat, use_container_width=True)
+
+st.markdown("---")
+
+# ── City Performance Table ─────────────────────────────────────────────────
+st.header("🏙️ City Performance")
+
+city_stats = filtered_df.groupby('City').agg({
+    'Sales': 'sum',
+    'Order ID': 'nunique',
+    'Customer ID': 'nunique',
+    'Quantity': 'sum'
+}).reset_index()
+
+city_stats.columns = ['City', 'Total Sales', 'Orders', 'Customers', 'Units Sold']
+city_stats['Avg Order Value'] = city_stats['Total Sales'] / city_stats['Orders']
+city_stats = city_stats.nlargest(20, 'Total Sales').reset_index(drop=True)
+city_stats.index = range(1, len(city_stats) + 1)
+
+# Format for display
+display_df = city_stats.copy()
+display_df['Total Sales'] = display_df['Total Sales'].apply('${:,.0f}'.format)
+display_df['Avg Order Value'] = display_df['Avg Order Value'].apply('${:,.0f}'.format)
 
 st.dataframe(
-    city_table,
+    display_df,
     use_container_width=True,
-    hide_index=True,
+    height=400,
     column_config={
-        "Rank": st.column_config.NumberColumn("Rank"),
-        "City": st.column_config.TextColumn("City Name"),
-        "Sales": st.column_config.NumberColumn("Total Sales", format="$%d"),
-        "Share %": st.column_config.NumberColumn("Share %", format="%.1f%%")
+        "City": "City",
+        "Total Sales": "Total Sales",
+        "Orders": "Orders",
+        "Customers": "Customers",
+        "Units Sold": "Units",
+        "Avg Order Value": "Avg Order"
     }
 )
+
+# ── Download filtered data ─────────────────────────────────────────────────
+st.markdown("---")
+col1, col2, col3 = st.columns([2, 2, 2])
+
+with col2:
+    csv = filtered_df.to_csv(index=False)
+    st.download_button(
+        label="📥 Download Filtered Data (CSV)",
+        data=csv,
+        file_name=f"superstore_sales_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+# ── Footer ─────────────────────────────────────────────────────────────────
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; color: #718096; font-size: 0.8rem; padding: 20px;">
+    📊 Superstore Sales Analytics Dashboard • Built with Streamlit
+</div>
+""", unsafe_allow_html=True)
