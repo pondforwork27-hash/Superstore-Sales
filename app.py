@@ -386,7 +386,7 @@ _stcv1.html(f"""<script>
       s.setProperty('line-height', '1.8', 'important');
       s.setProperty('cursor', 'pointer', 'important');
       s.setProperty('text-align', 'center', 'important');
-      s.setProperty('transition', 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease, box-shadow 0.4s ease', 'important');
+      s.setProperty('transition', 'transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease', 'important');
       s.setProperty('will-change', 'transform, box-shadow', 'important');
 
       if (c.active) {{
@@ -438,7 +438,7 @@ _stcv1.html(f"""<script>
   // Debounced observer — wait 200ms after last DOM change before re-running
   new MutationObserver(function() {{
     clearTimeout(timeout);
-    timeout = setTimeout(applyStyles, 200);
+    timeout = setTimeout(applyStyles, 0);
   }}).observe(window.parent.document.body, {{childList:true, subtree:false}});
 }})();
 </script>""", height=0)
