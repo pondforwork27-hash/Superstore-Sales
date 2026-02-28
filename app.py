@@ -1077,11 +1077,9 @@ with _fc_col1:
         if _last_period_actual > 0:
             _fc_growth_pcts.append((_fc_vals.sum() - _last_period_actual) / _last_period_actual * 100)
 
-    # Vertical line: today / last data point
-    _today_line = _hist.index[-1] if _hist is not None else pd.Timestamp.now()
-    fig_fc.add_vline(x=_today_line, line_dash="dot", line_color="rgba(255,255,255,0.3)",
-                     annotation_text="Last data", annotation_font_color="#a0aec0",
-                     annotation_position="top right")
+    # Vertical line: last data point (must pass as string for Plotly)
+    _today_line = str(_hist.index[-1]) if _hist is not None else str(pd.Timestamp.now())
+    fig_fc.add_vline(x=_today_line, line_dash="dot", line_color="rgba(255,255,255,0.3)")
 
     fig_fc.update_layout(
         title=dict(text=f"Sales Forecast — Next {_fc_months} Months", font=dict(size=14), x=0.5),
