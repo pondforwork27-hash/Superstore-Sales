@@ -365,9 +365,6 @@ _stcv1.html(f"""<script>
         if (!btn && b.textContent.trim().length > 2) btn = b;
       }});
       if (!btn) return;
-      if (btn._styledByRcard) return; // already styled this session
-      btn._styledByRcard = true;
-
       // Apply base styles
       var s = btn.style;
       s.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
@@ -402,7 +399,7 @@ _stcv1.html(f"""<script>
       }} else {{
         s.setProperty('border', '1.5px solid ' + c.border, 'important');
         s.setProperty('opacity', '0.72', 'important');
-        s.setProperty('box-shadow', '0 2px 12px rgba(0,0,0,.4)', 'important');
+        s.setProperty('box-shadow', 'none', 'important');
         s.setProperty('animation', 'none', 'important');
       }}
 
