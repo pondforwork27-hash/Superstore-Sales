@@ -922,41 +922,6 @@ st.markdown(f'<div class="insight-card good"><div class="icon">🎯</div><div cl
 
 st.markdown("---")
 
-# ── CITIES TABLE ──────────────────────────────────────────────────────────────
-st.header("🏙️ Top Cities by Sales")
-
-_city_mask = pd.Series([True] * len(df), index=df.index)
-if st.session_state.sel_region_card: _city_mask &= df['Region'].isin(st.session_state.sel_region_card)
-if sel_category: _city_mask &= df['Category'].isin(sel_category)
-if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
-if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
-_city_base = df[_city_mask]
-
-_agg = _city_base.groupby(['City', 'State']).agg(
-    **{
-        'Total Sales': ('Sales',       'sum'),
-        'Orders':      ('Order ID',    'nunique'),
-        'Customers':   ('Customer ID', 'nunique'),
-    }
-).reset_index()
-_agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
-_agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
-_agg.index += 1
-_agg = _agg[['State', 'City', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
-
-st.dataframe(
-    _agg.style.format({
-        'Total Sales': '${:,.2f}',
-        'Avg Order':   '${:,.2f}',
-        'Orders':      '{:,}',
-        'Customers':   '{:,}',
-    }),
-    use_container_width=True,
-    height=420,
-)
-
-st.markdown("---")
-
 # ── SALES FORECAST ────────────────────────────────────────────────────────────
 st.header("🔮 Sales Forecast")
 st.caption("Linear trend + seasonal decomposition forecast based on historical data in current filter.")
@@ -1125,4 +1090,39 @@ with _fc_sum_cols[2]:
       <div class="label">Highest Forecast Contributor</div>
       <div class="value">{_best_dim}</div>
       <div class="detail">Expected to lead in revenue over the forecast window.</div>
+      # ── CITIES TABLE ──────────────────────────────────────────────────────────────
+st.header("🏙️ Top Cities by Sales")
+
+_city_mask = pd.Series([True] * len(df), index=df.index)
+if st.session_state.sel_region_card: _city_mask &= df['Region'].isin(st.session_state.sel_region_card)
+if sel_category: _city_mask &= df['Category'].isin(sel_category)
+if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
+if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
+_city_base = df[_city_mask]
+
+_agg = _city_base.groupby(['City', 'State']).agg(
+    **{
+        'Total Sales': ('Sales',       'sum'),
+        'Orders':      ('Order ID',    'nunique'),
+        'Customers':   ('Customer ID', 'nunique'),
+    }
+).reset_index()
+_agg['Avg Order'] = _agg['Total Sales'] / _agg['Orders']
+_agg = _agg.sort_values('Total Sales', ascending=False).reset_index(drop=True)
+_agg.index += 1
+_agg = _agg[['State', 'City', 'Total Sales', 'Orders', 'Customers', 'Avg Order']]
+
+st.dataframe(
+    _agg.style.format({
+        'Total Sales': '${:,.2f}',
+        'Avg Order':   '${:,.2f}',
+        'Orders':      '{:,}',
+        'Customers':   '{:,}',
+    }),
+    use_container_width=True,
+    height=420,
+)
+
+st.markdown("---")
     </div>""", unsafe_allow_html=True)
+
