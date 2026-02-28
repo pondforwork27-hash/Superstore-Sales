@@ -296,26 +296,59 @@ _region_meta = {
     'South':   ('🌴', '#1e0f38', '#5a35a8', '#9f7aea', '#d6bcfa'),
 }
 
-# ── Region cards ─────────────────────────────────────────────────────────
-import streamlit.components.v1 as _stcv1
-import json as _json
+# ── Per-card CSS: the entire st.button IS the card ────────────────────────
+_css_parts = ["<style>"]
+for _, _r in _all_region_stats.iterrows():
+    _reg = _r['Region']
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _act  = _reg in st.session_state.sel_region_card
+    _bw   = '3px' if _act else '1.5px'
+    _op   = '1.0' if _act else '0.68'
+    _glow = f'box-shadow:0 0 26px {_border}bb,0 4px 16px rgba(0,0,0,0.5) !important;' if _act else 'box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;'
+    _slug = _reg.lower().replace(' ', '-')
+    _css_parts.append(f"""
+.rcard-{_slug} > div > div > button {{
+    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
+    border: {_bw} solid {_border} !important;
+    border-radius: 16px !important;
+    color: {_accent} !important;
+    min-height: 130px !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 18px 12px 14px !important;
+    font-size: 0.85rem !important;
+    white-space: pre-line !important;
+    line-height: 1.8 !important;
+    opacity: {_op} !important;
+    {_glow}
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    text-align: center !important;
+}}
+.rcard-{_slug} > div > div > button:hover {{
+    opacity: 1.0 !important;
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: 0 0 22px {_border}aa, 0 8px 20px rgba(0,0,0,0.4) !important;
+    border-color: {_accent} !important;
+}}""")
+_css_parts.append("</style>")
+st.markdown("".join(_css_parts), unsafe_allow_html=True)
 
+# ── Render cards ──────────────────────────────────────────────────────────
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
-    _region  = _row['Region']
-    _sales   = _row['Sales']
-    _orders  = int(_row['Orders'])
-    _share   = _sales / _grand_total * 100 if _grand_total else 0
-    _icon    = _region_meta[_region][0]
-    _is_act  = _region in st.session_state.sel_region_card
-    _check   = "  ✓" if _is_act else ""
-    _label   = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
-    # Unique marker per card so JS can find the button
-    _marker_id = f"rcard-marker-{_region.lower().replace(' ','-')}"
+    _region   = _row['Region']
+    _sales    = _row['Sales']
+    _orders   = int(_row['Orders'])
+    _share    = _sales / _grand_total * 100 if _grand_total else 0
+    _icon     = _region_meta[_region][0]
+    _is_act   = _region in st.session_state.sel_region_card
+    _check    = "  ✓" if _is_act else ""
+    _slug     = _region.lower().replace(' ', '-')
+    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
 
     with _rc_cols[_idx]:
-        # Invisible marker so JS can locate this column
-        st.markdown(f'<span id="{_marker_id}" style="display:none"></span>', unsafe_allow_html=True)
+        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
         if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
@@ -324,6 +357,7 @@ for _idx, _row in _all_region_stats.iterrows():
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
@@ -332,121 +366,7 @@ if st.session_state.sel_region_card:
             st.session_state.sel_region_card = []
             st.rerun()
 
-# JS: find each button via its marker's parent column, inject inline styles + glow
-_js_data = []
-for _, _r in _all_region_stats.iterrows():
-    _reg  = _r['Region']
-    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _act  = _reg in st.session_state.sel_region_card
-    _slug = _reg.lower().replace(' ', '-')
-    _js_data.append({'id': f'rcard-marker-{_slug}', 'bg1': _bg1, 'bg2': _bg2,
-                     'border': _border, 'accent': _accent, 'active': _act})
-
-_stcv1.html(f"""<script>
-(function() {{
-  var cards = {_json.dumps(_js_data)};
-  var applying = false;
-  var timeout = null;
-
-  function applyStyles() {{
-    if (applying) return;
-    applying = true;
-    var doc = window.parent.document;
-    cards.forEach(function(c) {{
-      var marker = doc.getElementById(c.id);
-      if (!marker) return;
-      var col = marker;
-      for (var i = 0; i < 10; i++) {{
-        if (!col.parentElement) break;
-        col = col.parentElement;
-        var t = col.getAttribute('data-testid');
-        if (t === 'column' || t === 'stVerticalBlock') break;
-      }}
-      var btn = null;
-      col.querySelectorAll('button').forEach(function(b) {{
-        if (!btn && b.textContent.trim().length > 2) btn = b;
-      }});
-      if (!btn) return;
-
-      // Check if already correct to avoid unnecessary repaints
-      var wantBg = 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)';
-      if (btn.getAttribute('data-rcard-styled') === String(c.active)) return;
-      btn.setAttribute('data-rcard-styled', String(c.active));
-
-      var s = btn.style;
-      s.setProperty('background', wantBg, 'important');
-      s.setProperty('border-radius', '16px', 'important');
-      s.setProperty('color', c.accent, 'important');
-      s.setProperty('min-height', '130px', 'important');
-      s.setProperty('height', 'auto', 'important');
-      s.setProperty('width', '100%', 'important');
-      s.setProperty('padding', '18px 12px 14px', 'important');
-      s.setProperty('font-size', '0.85rem', 'important');
-      s.setProperty('white-space', 'pre-line', 'important');
-      s.setProperty('line-height', '1.8', 'important');
-      s.setProperty('cursor', 'pointer', 'important');
-      s.setProperty('text-align', 'center', 'important');
-      s.setProperty('transition', 'transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease', 'important');
-      s.setProperty('will-change', 'transform, box-shadow', 'important');
-
-      if (c.active) {{
-        s.setProperty('border', '3px solid ' + c.border, 'important');
-        s.setProperty('opacity', '1', 'important');
-        var kfId = 'kf-rcard-' + c.id;
-        if (!doc.getElementById(kfId)) {{
-          var kf = doc.createElement('style');
-          kf.id = kfId;
-          kf.textContent = '@keyframes ' + kfId + ' {{' +
-            '0%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22,0 2px 10px rgba(0,0,0,.4)}}' +
-            '25%{{box-shadow:0 0 18px ' + c.border + 'bb,0 0 38px ' + c.border + '55,0 4px 16px rgba(0,0,0,.5)}}' +
-            '50%{{box-shadow:0 0 30px ' + c.border + 'ff,0 0 60px ' + c.border + 'aa,0 6px 24px rgba(0,0,0,.6)}}' +
-            '75%{{box-shadow:0 0 18px ' + c.border + 'bb,0 0 38px ' + c.border + '55,0 4px 16px rgba(0,0,0,.5)}}' +
-            '100%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22,0 2px 10px rgba(0,0,0,.4)}}' +
-          '}}';
-          doc.head.appendChild(kf);
-        }}
-        s.setProperty('animation', kfId + ' 3s cubic-bezier(0.45,0,0.55,1) infinite', 'important');
-      }} else {{
-        s.setProperty('border', '1.5px solid ' + c.border, 'important');
-        s.setProperty('opacity', '0.72', 'important');
-        s.setProperty('box-shadow', 'none', 'important');
-        s.setProperty('animation', 'none', 'important');
-      }}
-
-      if (!btn._rcardHover) {{
-        btn._rcardHover = true;
-        btn.addEventListener('mouseenter', function() {{
-          s.setProperty('opacity', '1', 'important');
-          s.setProperty('transform', 'translateY(-5px) scale(1.03)', 'important');
-          s.setProperty('box-shadow', '0 0 36px ' + c.border + 'dd,0 0 70px ' + c.border + '55,0 12px 30px rgba(0,0,0,.55)', 'important');
-          s.setProperty('animation', 'none', 'important');
-        }});
-        btn.addEventListener('mouseleave', function() {{
-          s.setProperty('transform', '', 'important');
-          if (c.active) {{
-            var kfId2 = 'kf-rcard-' + c.id;
-            s.setProperty('animation', kfId2 + ' 3s cubic-bezier(0.45,0,0.55,1) infinite', 'important');
-          }}
-        }});
-      }}
-    }});
-    applying = false;
-  }}
-
-  applyStyles();
-
-  // Debounced observer — wait 200ms after last DOM change before re-running
-  new MutationObserver(function() {{
-    clearTimeout(timeout);
-    timeout = setTimeout(applyStyles, 0);
-  }}).observe(window.parent.document.body, {{childList:true, subtree:false}});
-}})();
-</script>""", height=0)
-
 st.markdown("---")
-
-
-
 
 # ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
