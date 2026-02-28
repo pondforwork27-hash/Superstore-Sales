@@ -345,29 +345,36 @@ for _, _r in _all_region_stats.iterrows():
 _stcv1.html(f"""<script>
 (function() {{
   var cards = {_json.dumps(_js_data)};
+  var applying = false;
+  var timeout = null;
+
   function applyStyles() {{
+    if (applying) return;
+    applying = true;
     var doc = window.parent.document;
     cards.forEach(function(c) {{
       var marker = doc.getElementById(c.id);
       if (!marker) return;
-      // Walk up to find the stVerticalBlock column container
       var col = marker;
       for (var i = 0; i < 10; i++) {{
         if (!col.parentElement) break;
         col = col.parentElement;
-        var testid = col.getAttribute('data-testid');
-        if (testid === 'column' || testid === 'stVerticalBlock') break;
+        var t = col.getAttribute('data-testid');
+        if (t === 'column' || t === 'stVerticalBlock') break;
       }}
-      // Find the button in this column (skip marker, get first real button)
       var btn = null;
-      var btns = col.querySelectorAll('button');
-      btns.forEach(function(b) {{
+      col.querySelectorAll('button').forEach(function(b) {{
         if (!btn && b.textContent.trim().length > 2) btn = b;
       }});
       if (!btn) return;
-      // Apply base styles
+
+      // Check if already correct to avoid unnecessary repaints
+      var wantBg = 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)';
+      if (btn.getAttribute('data-rcard-styled') === String(c.active)) return;
+      btn.setAttribute('data-rcard-styled', String(c.active));
+
       var s = btn.style;
-      s.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
+      s.setProperty('background', wantBg, 'important');
       s.setProperty('border-radius', '16px', 'important');
       s.setProperty('color', c.accent, 'important');
       s.setProperty('min-height', '130px', 'important');
@@ -384,7 +391,6 @@ _stcv1.html(f"""<script>
       if (c.active) {{
         s.setProperty('border', '3px solid ' + c.border, 'important');
         s.setProperty('opacity', '1', 'important');
-        // Inject keyframe
         var kfId = 'kf-rcard-' + c.id;
         if (!doc.getElementById(kfId)) {{
           var kf = doc.createElement('style');
@@ -403,27 +409,33 @@ _stcv1.html(f"""<script>
         s.setProperty('animation', 'none', 'important');
       }}
 
-      btn.addEventListener('mouseenter', function() {{
-        s.setProperty('opacity', '1', 'important');
-        s.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
-        s.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc,0 10px 26px rgba(0,0,0,.55)', 'important');
-        s.setProperty('animation', 'none', 'important');
-      }});
-      btn.addEventListener('mouseleave', function() {{
-        s.setProperty('transform', '', 'important');
-        if (c.active) {{
-          s.setProperty('animation', 'kf-rcard-' + c.id + ' 2s ease-in-out infinite', 'important');
-        }}
-      }});
+      if (!btn._rcardHover) {{
+        btn._rcardHover = true;
+        btn.addEventListener('mouseenter', function() {{
+          s.setProperty('opacity', '1', 'important');
+          s.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
+          s.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc,0 10px 26px rgba(0,0,0,.55)', 'important');
+          s.setProperty('animation', 'none', 'important');
+        }});
+        btn.addEventListener('mouseleave', function() {{
+          s.setProperty('transform', '', 'important');
+          if (c.active) {{
+            var kfId2 = 'kf-rcard-' + c.id;
+            s.setProperty('animation', kfId2 + ' 2s ease-in-out infinite', 'important');
+          }}
+        }});
+      }}
     }});
+    applying = false;
   }}
 
   applyStyles();
-  new MutationObserver(function(muts) {{
-    muts.forEach(function(m) {{
-      if (m.addedNodes.length) {{ applyStyles(); }}
-    }});
-  }}).observe(window.parent.document.body, {{childList:true, subtree:true}});
+
+  // Debounced observer — wait 200ms after last DOM change before re-running
+  new MutationObserver(function() {{
+    clearTimeout(timeout);
+    timeout = setTimeout(applyStyles, 200);
+  }}).observe(window.parent.document.body, {{childList:true, subtree:false}});
 }})();
 </script>""", height=0)
 
