@@ -386,7 +386,8 @@ _stcv1.html(f"""<script>
       s.setProperty('line-height', '1.8', 'important');
       s.setProperty('cursor', 'pointer', 'important');
       s.setProperty('text-align', 'center', 'important');
-      s.setProperty('transition', 'transform 0.2s ease, opacity 0.2s', 'important');
+      s.setProperty('transition', 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease, box-shadow 0.4s ease', 'important');
+      s.setProperty('will-change', 'transform, box-shadow', 'important');
 
       if (c.active) {{
         s.setProperty('border', '3px solid ' + c.border, 'important');
@@ -396,12 +397,15 @@ _stcv1.html(f"""<script>
           var kf = doc.createElement('style');
           kf.id = kfId;
           kf.textContent = '@keyframes ' + kfId + ' {{' +
-            '0%,100%{{box-shadow:0 0 12px ' + c.border + '88,0 0 28px ' + c.border + '33,0 3px 12px rgba(0,0,0,.5)}}' +
-            '50%{{box-shadow:0 0 26px ' + c.border + 'ff,0 0 52px ' + c.border + '99,0 5px 20px rgba(0,0,0,.6)}}' +
+            '0%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22,0 2px 10px rgba(0,0,0,.4)}}' +
+            '25%{{box-shadow:0 0 18px ' + c.border + 'bb,0 0 38px ' + c.border + '55,0 4px 16px rgba(0,0,0,.5)}}' +
+            '50%{{box-shadow:0 0 30px ' + c.border + 'ff,0 0 60px ' + c.border + 'aa,0 6px 24px rgba(0,0,0,.6)}}' +
+            '75%{{box-shadow:0 0 18px ' + c.border + 'bb,0 0 38px ' + c.border + '55,0 4px 16px rgba(0,0,0,.5)}}' +
+            '100%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22,0 2px 10px rgba(0,0,0,.4)}}' +
           '}}';
           doc.head.appendChild(kf);
         }}
-        s.setProperty('animation', kfId + ' 2s ease-in-out infinite', 'important');
+        s.setProperty('animation', kfId + ' 3s cubic-bezier(0.45,0,0.55,1) infinite', 'important');
       }} else {{
         s.setProperty('border', '1.5px solid ' + c.border, 'important');
         s.setProperty('opacity', '0.72', 'important');
@@ -413,15 +417,15 @@ _stcv1.html(f"""<script>
         btn._rcardHover = true;
         btn.addEventListener('mouseenter', function() {{
           s.setProperty('opacity', '1', 'important');
-          s.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
-          s.setProperty('box-shadow', '0 0 30px ' + c.border + 'cc,0 10px 26px rgba(0,0,0,.55)', 'important');
+          s.setProperty('transform', 'translateY(-5px) scale(1.03)', 'important');
+          s.setProperty('box-shadow', '0 0 36px ' + c.border + 'dd,0 0 70px ' + c.border + '55,0 12px 30px rgba(0,0,0,.55)', 'important');
           s.setProperty('animation', 'none', 'important');
         }});
         btn.addEventListener('mouseleave', function() {{
           s.setProperty('transform', '', 'important');
           if (c.active) {{
             var kfId2 = 'kf-rcard-' + c.id;
-            s.setProperty('animation', kfId2 + ' 2s ease-in-out infinite', 'important');
+            s.setProperty('animation', kfId2 + ' 3s cubic-bezier(0.45,0,0.55,1) infinite', 'important');
           }}
         }});
       }}
