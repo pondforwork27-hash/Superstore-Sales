@@ -296,45 +296,41 @@ _region_meta = {
     'South':   ('🌴', '#1e0f38', '#5a35a8', '#9f7aea', '#d6bcfa'),
 }
 
-# ── Per-card CSS: the entire st.button IS the card ────────────────────────
 _css_parts = ["<style>"]
 for _, _r in _all_region_stats.iterrows():
     _reg = _r['Region']
     _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
     _act  = _reg in st.session_state.sel_region_card
     _bw   = '3px' if _act else '1.5px'
-    _op   = '1.0' if _act else '0.68'
-    _glow = f'box-shadow:0 0 26px {_border}bb,0 4px 16px rgba(0,0,0,0.5) !important;' if _act else 'box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;'
+    _op   = '1.0' if _act else '0.72'
     _slug = _reg.lower().replace(' ', '-')
-    _css_parts.append(f"""
-.rcard-{_slug} > div > div > button {{
-    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;
-    border: {_bw} solid {_border} !important;
-    border-radius: 16px !important;
-    color: {_accent} !important;
-    min-height: 130px !important;
-    height: auto !important;
-    width: 100% !important;
-    padding: 18px 12px 14px !important;
-    font-size: 0.85rem !important;
-    white-space: pre-line !important;
-    line-height: 1.8 !important;
-    opacity: {_op} !important;
-    {_glow}
-    transition: all 0.2s ease !important;
-    cursor: pointer !important;
-    text-align: center !important;
-}}
-.rcard-{_slug} > div > div > button:hover {{
-    opacity: 1.0 !important;
-    transform: translateY(-4px) scale(1.02) !important;
-    box-shadow: 0 0 22px {_border}aa, 0 8px 20px rgba(0,0,0,0.4) !important;
-    border-color: {_accent} !important;
-}}""")
+    _css_parts.append(
+        f".rcard-{_slug} > div > div > button {{\n"
+        f"    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;\n"
+        f"    border: {_bw} solid {_border} !important;\n"
+        f"    border-radius: 16px !important;\n"
+        f"    color: {_accent} !important;\n"
+        f"    min-height: 130px !important;\n"
+        f"    height: auto !important;\n"
+        f"    width: 100% !important;\n"
+        f"    padding: 18px 12px 14px !important;\n"
+        f"    font-size: 0.85rem !important;\n"
+        f"    white-space: pre-line !important;\n"
+        f"    line-height: 1.8 !important;\n"
+        f"    opacity: {_op} !important;\n"
+        f"    transition: transform 0.15s ease, opacity 0.15s ease !important;\n"
+        f"    cursor: pointer !important;\n"
+        f"    text-align: center !important;\n"
+        f"}}\n"
+        f".rcard-{_slug} > div > div > button:hover {{\n"
+        f"    opacity: 1.0 !important;\n"
+        f"    transform: translateY(-4px) scale(1.02) !important;\n"
+        f"    border-color: {_accent} !important;\n"
+        f"}}\n"
+    )
 _css_parts.append("</style>")
 st.markdown("".join(_css_parts), unsafe_allow_html=True)
 
-# ── Render cards ──────────────────────────────────────────────────────────
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
     _region   = _row['Region']
@@ -365,6 +361,55 @@ if st.session_state.sel_region_card:
         if st.button("✕ Clear region filter", key="clear_region_cards", use_container_width=True):
             st.session_state.sel_region_card = []
             st.rerun()
+
+import streamlit.components.v1 as _stcv1, json as _json
+_glow_data = []
+for _, _r in _all_region_stats.iterrows():
+    _reg = _r['Region']
+    _, _, _, _border, _ = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _act = _reg in st.session_state.sel_region_card
+    _slug = _reg.lower().replace(' ', '-')
+    _glow_data.append({'slug': _slug, 'border': _border, 'active': _act})
+
+_glow_js = _json.dumps(_glow_data)
+_stcv1.html(f"""<script>
+(function() {{
+  var cards = {_glow_js};
+  function injectGlow() {{
+    var doc = window.parent.document;
+    cards.forEach(function(c) {{
+      var wrap = doc.querySelector('.rcard-' + c.slug);
+      if (!wrap) return;
+      var btn = wrap.querySelector('button');
+      if (!btn) return;
+      var want = c.active ? '1' : '0';
+      if (btn.getAttribute('data-ga') === want) return;
+      btn.setAttribute('data-ga', want);
+      var kfId = 'glow-kf-' + c.slug;
+      if (c.active) {{
+        if (!doc.getElementById(kfId)) {{
+          var s = doc.createElement('style');
+          s.id = kfId;
+          s.textContent = '@keyframes ' + kfId + ' {{' +
+            '0%,100%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22}}' +
+            '50%{{box-shadow:0 0 28px ' + c.border + 'ff,0 0 55px ' + c.border + 'aa,0 0 80px ' + c.border + '44}}' +
+          '}}';
+          doc.head.appendChild(s);
+        }}
+        btn.style.setProperty('animation', kfId + ' 2.5s ease-in-out infinite', 'important');
+        btn.style.setProperty('will-change', 'box-shadow', 'important');
+      }} else {{
+        btn.style.setProperty('animation', 'none', 'important');
+        btn.style.setProperty('box-shadow', 'none', 'important');
+      }}
+    }});
+  }}
+  injectGlow();
+  new MutationObserver(injectGlow).observe(
+    window.parent.document.body, {{childList:true, subtree:true}}
+  );
+}})();
+</script>""", height=0)
 
 st.markdown("---")
 
