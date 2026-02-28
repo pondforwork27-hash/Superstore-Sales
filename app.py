@@ -326,7 +326,6 @@ if st.session_state.sel_region_card:
             st.session_state.sel_region_card = []
             st.rerun()
 
-# Pure JS: find buttons by text content → apply all styles + glow
 _js_cards = []
 for _, _r in _all_region_stats.iterrows():
     _reg = _r['Region']
@@ -344,7 +343,6 @@ _stcv1.html(f"""<script>
   function styleAll() {{
     var doc = window.parent.document;
     cards.forEach(function(c) {{
-      // Find button by scanning all buttons for one containing the region name
       var allBtns = doc.querySelectorAll('button');
       var btn = null;
       for (var i = 0; i < allBtns.length; i++) {{
@@ -355,12 +353,10 @@ _stcv1.html(f"""<script>
       }}
       if (!btn) return;
 
-      // Skip if already styled in correct active state
       var want = c.active ? '1' : '0';
       if (btn.getAttribute('data-rs') === want) return;
       btn.setAttribute('data-rs', want);
 
-      // Apply all card styles directly
       var s = btn.style;
       s.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
       s.setProperty('border-radius', '16px', 'important');
@@ -380,7 +376,6 @@ _stcv1.html(f"""<script>
       if (c.active) {{
         s.setProperty('border', '3px solid ' + c.border, 'important');
         s.setProperty('opacity', '1', 'important');
-        // Keyframe glow
         var kfId = 'gkf-' + c.region.toLowerCase();
         if (!doc.getElementById(kfId)) {{
           var el = doc.createElement('style');
@@ -400,7 +395,6 @@ _stcv1.html(f"""<script>
         s.setProperty('box-shadow', 'none', 'important');
       }}
 
-      // Hover events (attach once)
       if (!btn._rsHover) {{
         btn._rsHover = true;
         var border = c.border;
@@ -438,7 +432,6 @@ st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down"
 
 all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
 
-# Map click: quick-select top states (only when no region selected)
 if not st.session_state.clicked_state and not st.session_state.sel_region_card:
     st.markdown("""<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;align-items:center;">
         <span style="color:#90cdf4;font-size:0.8rem;">⚡ Quick select:</span>""", unsafe_allow_html=True)
@@ -451,7 +444,6 @@ if not st.session_state.clicked_state and not st.session_state.sel_region_card:
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Show selected state badge
 if st.session_state.clicked_state:
     col_info, col_clear_map = st.columns([5, 1])
     with col_info:
@@ -481,7 +473,6 @@ _region_border_colors = {'East':'#4299e1','West':'#48bb78','Central':'#ed8936','
 _sel_regions = st.session_state.sel_region_card
 
 if _sel_regions:
-    # Base layer: dim ALL states (grey)
     fig_map = px.choropleth(
         all_state_sales, locations='State Code', locationmode="USA-states",
         color='Sales', scope="usa", hover_name='State',
@@ -492,7 +483,6 @@ if _sel_regions:
         hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>",
         marker_line_color='rgba(100,100,120,0.3)', marker_line_width=0.5
     )
-    # Overlay: highlight each selected region in its own color
     for _sreg in _sel_regions:
         _reg_df = all_state_sales[all_state_sales['State'].isin(
             df[df['Region'] == _sreg]['State'].unique()
@@ -513,7 +503,6 @@ if _sel_regions:
                 name=_sreg,
             ))
 else:
-    # Normal map: no region selected
     fig_map = px.choropleth(
         all_state_sales, locations='State Code', locationmode="USA-states",
         color='Sales', scope="usa", hover_name='State',
@@ -521,7 +510,6 @@ else:
     )
     fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
 
-# Clicked state: red border highlight
 if st.session_state.clicked_state:
     _hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
     if not _hl.empty:
@@ -740,7 +728,6 @@ fig_ab.update_layout(
 st.plotly_chart(fig_ab, use_container_width=True, key="ab_trend")
 
 # ── Category breakdown A vs B ─────────────────────────────────────────────────
-# Build dataframes with order counts
 ab_cat_a = grp_a.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_a)
 ab_cat_b = grp_b.groupby("Category").agg(Sales=("Sales","sum"), **{"Order Count":("Order ID","nunique")}).reset_index().assign(Group=val_b)
 ab_cat   = pd.concat([ab_cat_a, ab_cat_b], ignore_index=True)
@@ -748,7 +735,6 @@ ab_cat   = pd.concat([ab_cat_a, ab_cat_b], ignore_index=True)
 group_a_color = "#4299e1"
 group_b_color = "#e94560"
 
-# ── FIX: use custom_data + for_each_trace to inject group name per trace ──────
 fig_cat_ab = px.bar(
     ab_cat,
     x="Category",
@@ -760,7 +746,6 @@ fig_cat_ab = px.bar(
     custom_data=["Order Count", "Group"],
 )
 
-# Inject correct group name directly into each trace's hovertemplate
 fig_cat_ab.for_each_trace(
     lambda t: t.update(
         hovertemplate=(
@@ -792,7 +777,6 @@ fig_cat_ab.update_layout(
 
 st.plotly_chart(fig_cat_ab, use_container_width=True, key="ab_cat")
 
-# Group legend pills
 st.markdown(f"""
 <div style="display:flex; justify-content:center; gap:20px; margin-bottom:15px;">
     <div style="display:flex; align-items:center; gap:8px; background:{group_a_color}; padding:5px 15px; border-radius:20px; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
@@ -804,7 +788,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Category label pills
 categories = sorted(filtered_df['Category'].unique())
 category_colors = {'Furniture': '#48bb78', 'Office Supplies': '#f39c12', 'Technology': '#9b59b6'}
 cols = st.columns(len(categories))
@@ -818,7 +801,6 @@ for i, cat in enumerate(categories):
         </div>
         """, unsafe_allow_html=True)
 
-# Order count summary cards
 col1, col2, col3 = st.columns(3)
 for col, cat_name, icon in [(col1,'Furniture','📦'), (col2,'Office Supplies','📎'), (col3,'Technology','💻')]:
     a_row = ab_cat_a[ab_cat_a['Category'] == cat_name]
@@ -932,7 +914,6 @@ with _fc_col2:
                                format_func=lambda x: f"{x} months")
     _fc_dim = st.selectbox("Breakdown by", ["Total", "Category", "Region"], key="fc_dim")
 
-# Build monthly series from filtered_df
 _fc_df = filtered_df.copy()
 _fc_df['Month_dt'] = pd.to_datetime(_fc_df['Order Date']).dt.to_period('M').dt.to_timestamp()
 
@@ -945,28 +926,23 @@ else:
     _series_dict = {reg: grp.groupby('Month_dt')['Sales'].sum()
                     for reg, grp in _fc_df.groupby('Region')}
 
-# Forecast using numpy polyfit (linear trend) + monthly seasonality
 def _forecast_series(series, n_months):
     series = series.sort_index().asfreq('MS', fill_value=0)
     if len(series) < 4:
         return None, None, None
     y = series.values.astype(float)
     x = np.arange(len(y))
-    # Fit linear trend
     coeffs = np.polyfit(x, y, 1)
     trend  = np.poly1d(coeffs)
     detrended = y - trend(x)
-    # Seasonal: average by month-of-year
     months = series.index.month
     seasonal = np.array([detrended[months == m].mean() if (months == m).any() else 0 for m in range(1, 13)])
-    # Generate future dates
     last_date = series.index[-1]
     future_dates = pd.date_range(last_date + pd.DateOffset(months=1), periods=n_months, freq='MS')
     future_x = np.arange(len(y), len(y) + n_months)
     future_trend = trend(future_x)
     future_seasonal = np.array([seasonal[d.month - 1] for d in future_dates])
     forecast = np.maximum(future_trend + future_seasonal, 0)
-    # Confidence interval: ±15% + residual std
     residuals = y - (trend(x) + np.array([seasonal[m-1] for m in months]))
     sigma = residuals.std() * 1.5
     lower = np.maximum(forecast - sigma, 0)
@@ -991,6 +967,7 @@ with _fc_col1:
     fig_fc = go.Figure()
     _fc_total_next = 0
     _fc_growth_pcts = []
+    _hist = None
 
     for _dim_name, _dim_series in _series_dict.items():
         _color = _dim_colors.get(_dim_name, "#90cdf4")
@@ -998,7 +975,6 @@ with _fc_col1:
         if _hist is None:
             continue
 
-        # Historical line
         fig_fc.add_trace(go.Scatter(
             x=_hist.index, y=_hist.values,
             name=f"{_dim_name} (actual)",
@@ -1008,8 +984,6 @@ with _fc_col1:
             hovertemplate=f"<b>{_dim_name}</b><br>%{{x|%b %Y}}<br>Actual: $%{{y:,.0f}}<extra></extra>"
         ))
 
-        # Forecast line (dashed)
-        # Bridge: connect last historical point to first forecast
         _bridge_x = [_hist.index[-1], _fc_vals.index[0]]
         _bridge_y = [_hist.values[-1], _fc_vals.values[0]]
         fig_fc.add_trace(go.Scatter(
@@ -1026,7 +1000,6 @@ with _fc_col1:
             hovertemplate=f"<b>{_dim_name} forecast</b><br>%{{x|%b %Y}}<br>$%{{y:,.0f}}<extra></extra>"
         ))
 
-        # Confidence band
         _lo, _hi = _ci
         fig_fc.add_trace(go.Scatter(
             x=list(_fc_vals.index) + list(_fc_vals.index[::-1]),
@@ -1042,7 +1015,6 @@ with _fc_col1:
         if _last_period_actual > 0:
             _fc_growth_pcts.append((_fc_vals.sum() - _last_period_actual) / _last_period_actual * 100)
 
-    # Vertical line: last data point (must pass as string for Plotly)
     _today_line = str(_hist.index[-1]) if _hist is not None else str(pd.Timestamp.now())
     fig_fc.add_vline(x=_today_line, line_dash="dot", line_color="rgba(255,255,255,0.3)")
 
@@ -1072,6 +1044,7 @@ with _fc_sum_cols[0]:
       <div class="value">${_fc_total_next:,.0f}</div>
       <div class="detail">Based on linear trend + seasonal pattern from filtered data.</div>
     </div>""", unsafe_allow_html=True)
+
 with _fc_sum_cols[1]:
     st.markdown(f"""
     <div class="insight-card {_growth_cls}">
@@ -1080,6 +1053,7 @@ with _fc_sum_cols[1]:
       <div class="value">{_growth_arrow} {abs(_avg_growth):.1f}%</div>
       <div class="detail">Compared to the previous {_fc_months} months of actual sales.</div>
     </div>""", unsafe_allow_html=True)
+
 with _fc_sum_cols[2]:
     _best_dim = max(_series_dict.keys(),
                     key=lambda k: _forecast_series(_series_dict[k], _fc_months)[1].sum()
@@ -1090,7 +1064,11 @@ with _fc_sum_cols[2]:
       <div class="label">Highest Forecast Contributor</div>
       <div class="value">{_best_dim}</div>
       <div class="detail">Expected to lead in revenue over the forecast window.</div>
-      # ── CITIES TABLE ──────────────────────────────────────────────────────────────
+    </div>""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ── CITIES TABLE ──────────────────────────────────────────────────────────────
 st.header("🏙️ Top Cities by Sales")
 
 _city_mask = pd.Series([True] * len(df), index=df.index)
@@ -1124,5 +1102,3 @@ st.dataframe(
 )
 
 st.markdown("---")
-    </div>""", unsafe_allow_html=True)
-
