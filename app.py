@@ -296,40 +296,7 @@ _region_meta = {
     'South':   ('🌴', '#1e0f38', '#5a35a8', '#9f7aea', '#d6bcfa'),
 }
 
-_css_parts = ["<style>"]
-for _, _r in _all_region_stats.iterrows():
-    _reg = _r['Region']
-    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
-    _act  = _reg in st.session_state.sel_region_card
-    _bw   = '3px' if _act else '1.5px'
-    _op   = '1.0' if _act else '0.72'
-    _slug = _reg.lower().replace(' ', '-')
-    _css_parts.append(
-        f".rcard-{_slug} > div > div > button {{\n"
-        f"    background: linear-gradient(145deg, {_bg1} 0%, {_bg2} 100%) !important;\n"
-        f"    border: {_bw} solid {_border} !important;\n"
-        f"    border-radius: 16px !important;\n"
-        f"    color: {_accent} !important;\n"
-        f"    min-height: 130px !important;\n"
-        f"    height: auto !important;\n"
-        f"    width: 100% !important;\n"
-        f"    padding: 18px 12px 14px !important;\n"
-        f"    font-size: 0.85rem !important;\n"
-        f"    white-space: pre-line !important;\n"
-        f"    line-height: 1.8 !important;\n"
-        f"    opacity: {_op} !important;\n"
-        f"    transition: transform 0.15s ease, opacity 0.15s ease !important;\n"
-        f"    cursor: pointer !important;\n"
-        f"    text-align: center !important;\n"
-        f"}}\n"
-        f".rcard-{_slug} > div > div > button:hover {{\n"
-        f"    opacity: 1.0 !important;\n"
-        f"    transform: translateY(-4px) scale(1.02) !important;\n"
-        f"    border-color: {_accent} !important;\n"
-        f"}}\n"
-    )
-_css_parts.append("</style>")
-st.markdown("".join(_css_parts), unsafe_allow_html=True)
+import streamlit.components.v1 as _stcv1, json as _json
 
 _rc_cols = st.columns(len(_all_region_stats))
 for _idx, _row in _all_region_stats.iterrows():
@@ -340,11 +307,9 @@ for _idx, _row in _all_region_stats.iterrows():
     _icon     = _region_meta[_region][0]
     _is_act   = _region in st.session_state.sel_region_card
     _check    = "  ✓" if _is_act else ""
-    _slug     = _region.lower().replace(' ', '-')
     _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
 
     with _rc_cols[_idx]:
-        st.markdown(f'<div class="rcard-{_slug}">', unsafe_allow_html=True)
         if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
             _cards = list(st.session_state.sel_region_card)
             if _region in _cards:
@@ -353,7 +318,6 @@ for _idx, _row in _all_region_stats.iterrows():
                 _cards.append(_region)
             st.session_state.sel_region_card = _cards
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.sel_region_card:
     _, _clr_col = st.columns([4, 1])
@@ -362,56 +326,112 @@ if st.session_state.sel_region_card:
             st.session_state.sel_region_card = []
             st.rerun()
 
-import streamlit.components.v1 as _stcv1, json as _json
-_glow_data = []
+# Pure JS: find buttons by text content → apply all styles + glow
+_js_cards = []
 for _, _r in _all_region_stats.iterrows():
     _reg = _r['Region']
-    _, _, _, _border, _ = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
+    _icon, _bg1, _bg2, _border, _accent = _region_meta.get(_reg, ('🌎','#0d1b2a','#1b2a3b','#4299e1','#90cdf4'))
     _act = _reg in st.session_state.sel_region_card
-    _slug = _reg.lower().replace(' ', '-')
-    _glow_data.append({'slug': _slug, 'border': _border, 'active': _act})
+    _js_cards.append({
+        'region': _reg, 'bg1': _bg1, 'bg2': _bg2,
+        'border': _border, 'accent': _accent, 'active': _act
+    })
 
-_glow_js = _json.dumps(_glow_data)
 _stcv1.html(f"""<script>
 (function() {{
-  var cards = {_glow_js};
-  function injectGlow() {{
+  var cards = {_json.dumps(_js_cards)};
+
+  function styleAll() {{
     var doc = window.parent.document;
     cards.forEach(function(c) {{
-      var wrap = doc.querySelector('.rcard-' + c.slug);
-      if (!wrap) return;
-      var btn = wrap.querySelector('button');
-      if (!btn) return;
-      var want = c.active ? '1' : '0';
-      if (btn.getAttribute('data-ga') === want) return;
-      btn.setAttribute('data-ga', want);
-      var kfId = 'glow-kf-' + c.slug;
-      if (c.active) {{
-        if (!doc.getElementById(kfId)) {{
-          var s = doc.createElement('style');
-          s.id = kfId;
-          s.textContent = '@keyframes ' + kfId + ' {{' +
-            '0%,100%{{box-shadow:0 0 8px ' + c.border + '55,0 0 20px ' + c.border + '22}}' +
-            '50%{{box-shadow:0 0 28px ' + c.border + 'ff,0 0 55px ' + c.border + 'aa,0 0 80px ' + c.border + '44}}' +
-          '}}';
-          doc.head.appendChild(s);
+      // Find button by scanning all buttons for one containing the region name
+      var allBtns = doc.querySelectorAll('button');
+      var btn = null;
+      for (var i = 0; i < allBtns.length; i++) {{
+        if (allBtns[i].innerText && allBtns[i].innerText.indexOf(c.region) !== -1) {{
+          btn = allBtns[i];
+          break;
         }}
-        btn.style.setProperty('animation', kfId + ' 2.5s ease-in-out infinite', 'important');
-        btn.style.setProperty('will-change', 'box-shadow', 'important');
+      }}
+      if (!btn) return;
+
+      // Skip if already styled in correct active state
+      var want = c.active ? '1' : '0';
+      if (btn.getAttribute('data-rs') === want) return;
+      btn.setAttribute('data-rs', want);
+
+      // Apply all card styles directly
+      var s = btn.style;
+      s.setProperty('background', 'linear-gradient(145deg,' + c.bg1 + ' 0%,' + c.bg2 + ' 100%)', 'important');
+      s.setProperty('border-radius', '16px', 'important');
+      s.setProperty('color', c.accent, 'important');
+      s.setProperty('min-height', '130px', 'important');
+      s.setProperty('height', 'auto', 'important');
+      s.setProperty('width', '100%', 'important');
+      s.setProperty('padding', '18px 12px 14px', 'important');
+      s.setProperty('font-size', '0.85rem', 'important');
+      s.setProperty('white-space', 'pre-line', 'important');
+      s.setProperty('line-height', '1.8', 'important');
+      s.setProperty('cursor', 'pointer', 'important');
+      s.setProperty('text-align', 'center', 'important');
+      s.setProperty('transition', 'transform 0.15s ease, opacity 0.15s ease', 'important');
+      s.setProperty('will-change', 'transform, box-shadow', 'important');
+
+      if (c.active) {{
+        s.setProperty('border', '3px solid ' + c.border, 'important');
+        s.setProperty('opacity', '1', 'important');
+        // Keyframe glow
+        var kfId = 'gkf-' + c.region.toLowerCase();
+        if (!doc.getElementById(kfId)) {{
+          var el = doc.createElement('style');
+          el.id = kfId;
+          el.textContent =
+            '@keyframes ' + kfId + '{{' +
+            '0%,100%{{box-shadow:0 0 8px ' + c.border + '55,0 0 18px ' + c.border + '22}}' +
+            '50%{{box-shadow:0 0 30px ' + c.border + 'ff,0 0 60px ' + c.border + 'bb,0 0 90px ' + c.border + '44}}' +
+            '}}';
+          doc.head.appendChild(el);
+        }}
+        s.setProperty('animation', kfId + ' 2.5s ease-in-out infinite', 'important');
       }} else {{
-        btn.style.setProperty('animation', 'none', 'important');
-        btn.style.setProperty('box-shadow', 'none', 'important');
+        s.setProperty('border', '1.5px solid ' + c.border, 'important');
+        s.setProperty('opacity', '0.72', 'important');
+        s.setProperty('animation', 'none', 'important');
+        s.setProperty('box-shadow', 'none', 'important');
+      }}
+
+      // Hover events (attach once)
+      if (!btn._rsHover) {{
+        btn._rsHover = true;
+        var border = c.border;
+        var isAct = c.active;
+        btn.addEventListener('mouseenter', function() {{
+          btn.style.setProperty('opacity', '1', 'important');
+          btn.style.setProperty('transform', 'translateY(-4px) scale(1.02)', 'important');
+          btn.style.setProperty('box-shadow', '0 0 32px ' + border + 'dd, 0 10px 28px rgba(0,0,0,.5)', 'important');
+          btn.style.setProperty('animation', 'none', 'important');
+        }});
+        btn.addEventListener('mouseleave', function() {{
+          btn.style.setProperty('transform', '', 'important');
+          if (isAct) {{
+            btn.style.setProperty('animation', 'gkf-' + c.region.toLowerCase() + ' 2.5s ease-in-out infinite', 'important');
+          }}
+        }});
       }}
     }});
   }}
-  injectGlow();
-  new MutationObserver(injectGlow).observe(
-    window.parent.document.body, {{childList:true, subtree:true}}
-  );
+
+  styleAll();
+  var obs = new MutationObserver(function(muts) {{
+    var hasNew = muts.some(function(m) {{ return m.addedNodes.length > 0; }});
+    if (hasNew) styleAll();
+  }});
+  obs.observe(window.parent.document.body, {{childList:true, subtree:true}});
 }})();
 </script>""", height=0)
 
 st.markdown("---")
+
 
 # ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
@@ -934,3 +954,177 @@ st.dataframe(
     use_container_width=True,
     height=420,
 )
+
+st.markdown("---")
+
+# ── SALES FORECAST ────────────────────────────────────────────────────────────
+st.header("🔮 Sales Forecast")
+st.caption("Linear trend + seasonal decomposition forecast based on historical data in current filter.")
+
+_fc_col1, _fc_col2 = st.columns([3, 1])
+with _fc_col2:
+    _fc_months = st.selectbox("Forecast horizon", [3, 6, 12], index=1, key="fc_months",
+                               format_func=lambda x: f"{x} months")
+    _fc_dim = st.selectbox("Breakdown by", ["Total", "Category", "Region"], key="fc_dim")
+
+# Build monthly series from filtered_df
+_fc_df = filtered_df.copy()
+_fc_df['Month_dt'] = pd.to_datetime(_fc_df['Order Date']).dt.to_period('M').dt.to_timestamp()
+
+if _fc_dim == "Total":
+    _series_dict = {"Total": _fc_df.groupby('Month_dt')['Sales'].sum()}
+elif _fc_dim == "Category":
+    _series_dict = {cat: grp.groupby('Month_dt')['Sales'].sum()
+                    for cat, grp in _fc_df.groupby('Category')}
+else:
+    _series_dict = {reg: grp.groupby('Month_dt')['Sales'].sum()
+                    for reg, grp in _fc_df.groupby('Region')}
+
+# Forecast using numpy polyfit (linear trend) + monthly seasonality
+def _forecast_series(series, n_months):
+    series = series.sort_index().asfreq('MS', fill_value=0)
+    if len(series) < 4:
+        return None, None, None
+    y = series.values.astype(float)
+    x = np.arange(len(y))
+    # Fit linear trend
+    coeffs = np.polyfit(x, y, 1)
+    trend  = np.poly1d(coeffs)
+    detrended = y - trend(x)
+    # Seasonal: average by month-of-year
+    months = series.index.month
+    seasonal = np.array([detrended[months == m].mean() if (months == m).any() else 0 for m in range(1, 13)])
+    # Generate future dates
+    last_date = series.index[-1]
+    future_dates = pd.date_range(last_date + pd.DateOffset(months=1), periods=n_months, freq='MS')
+    future_x = np.arange(len(y), len(y) + n_months)
+    future_trend = trend(future_x)
+    future_seasonal = np.array([seasonal[d.month - 1] for d in future_dates])
+    forecast = np.maximum(future_trend + future_seasonal, 0)
+    # Confidence interval: ±15% + residual std
+    residuals = y - (trend(x) + np.array([seasonal[m-1] for m in months]))
+    sigma = residuals.std() * 1.5
+    lower = np.maximum(forecast - sigma, 0)
+    upper = forecast + sigma
+    return series, pd.Series(forecast, index=future_dates), (
+        pd.Series(lower, index=future_dates),
+        pd.Series(upper, index=future_dates)
+    )
+
+_dim_colors = {
+    "Total":          "#4299e1",
+    "Furniture":      "#48bb78",
+    "Office Supplies":"#ed8936",
+    "Technology":     "#9f7aea",
+    "West":           "#48bb78",
+    "East":           "#4299e1",
+    "Central":        "#ed8936",
+    "South":          "#9f7aea",
+}
+
+with _fc_col1:
+    fig_fc = go.Figure()
+    _fc_total_next = 0
+    _fc_growth_pcts = []
+
+    for _dim_name, _dim_series in _series_dict.items():
+        _color = _dim_colors.get(_dim_name, "#90cdf4")
+        _hist, _fc_vals, _ci = _forecast_series(_dim_series, _fc_months)
+        if _hist is None:
+            continue
+
+        # Historical line
+        fig_fc.add_trace(go.Scatter(
+            x=_hist.index, y=_hist.values,
+            name=f"{_dim_name} (actual)",
+            line=dict(color=_color, width=2.5),
+            mode="lines+markers",
+            marker=dict(size=5),
+            hovertemplate=f"<b>{_dim_name}</b><br>%{{x|%b %Y}}<br>Actual: $%{{y:,.0f}}<extra></extra>"
+        ))
+
+        # Forecast line (dashed)
+        # Bridge: connect last historical point to first forecast
+        _bridge_x = [_hist.index[-1], _fc_vals.index[0]]
+        _bridge_y = [_hist.values[-1], _fc_vals.values[0]]
+        fig_fc.add_trace(go.Scatter(
+            x=_bridge_x, y=_bridge_y,
+            line=dict(color=_color, width=2, dash='dot'),
+            showlegend=False, hoverinfo='skip', mode='lines'
+        ))
+        fig_fc.add_trace(go.Scatter(
+            x=_fc_vals.index, y=_fc_vals.values,
+            name=f"{_dim_name} (forecast)",
+            line=dict(color=_color, width=2.5, dash='dash'),
+            mode="lines+markers",
+            marker=dict(size=6, symbol='diamond'),
+            hovertemplate=f"<b>{_dim_name} forecast</b><br>%{{x|%b %Y}}<br>$%{{y:,.0f}}<extra></extra>"
+        ))
+
+        # Confidence band
+        _lo, _hi = _ci
+        fig_fc.add_trace(go.Scatter(
+            x=list(_fc_vals.index) + list(_fc_vals.index[::-1]),
+            y=list(_hi.values) + list(_lo.values[::-1]),
+            fill='toself',
+            fillcolor=f"rgba{tuple(int(_color.lstrip('#')[i:i+2], 16) for i in (0,2,4)) + (0.12,)}",
+            line=dict(color='rgba(0,0,0,0)'),
+            showlegend=False, hoverinfo='skip', name=f"{_dim_name} CI"
+        ))
+
+        _fc_total_next += _fc_vals.sum()
+        _last_period_actual = _hist.tail(_fc_months).sum()
+        if _last_period_actual > 0:
+            _fc_growth_pcts.append((_fc_vals.sum() - _last_period_actual) / _last_period_actual * 100)
+
+    # Vertical line: today / last data point
+    _today_line = _hist.index[-1] if _hist is not None else pd.Timestamp.now()
+    fig_fc.add_vline(x=_today_line, line_dash="dot", line_color="rgba(255,255,255,0.3)",
+                     annotation_text="Last data", annotation_font_color="#a0aec0",
+                     annotation_position="top right")
+
+    fig_fc.update_layout(
+        title=dict(text=f"Sales Forecast — Next {_fc_months} Months", font=dict(size=14), x=0.5),
+        xaxis=dict(title="", tickformat="%b %Y", tickangle=-30),
+        yaxis=dict(tickprefix="$", tickformat=",.0f", gridcolor="rgba(128,128,128,0.15)"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5,
+                    font=dict(size=10)),
+        margin=dict(l=10, r=10, t=45, b=10),
+        hovermode="x unified", height=420,
+    )
+    st.plotly_chart(fig_fc, use_container_width=True, key="fc_chart")
+
+# Forecast summary cards
+_avg_growth = np.mean(_fc_growth_pcts) if _fc_growth_pcts else 0
+_growth_cls = "good" if _avg_growth >= 0 else "alert"
+_growth_arrow = "▲" if _avg_growth >= 0 else "▼"
+
+_fc_sum_cols = st.columns(3)
+with _fc_sum_cols[0]:
+    st.markdown(f"""
+    <div class="insight-card good">
+      <div class="icon">🔮</div>
+      <div class="label">Projected Revenue (next {_fc_months}mo)</div>
+      <div class="value">${_fc_total_next:,.0f}</div>
+      <div class="detail">Based on linear trend + seasonal pattern from filtered data.</div>
+    </div>""", unsafe_allow_html=True)
+with _fc_sum_cols[1]:
+    st.markdown(f"""
+    <div class="insight-card {_growth_cls}">
+      <div class="icon">📈</div>
+      <div class="label">Projected Growth vs Prior Period</div>
+      <div class="value">{_growth_arrow} {abs(_avg_growth):.1f}%</div>
+      <div class="detail">Compared to the previous {_fc_months} months of actual sales.</div>
+    </div>""", unsafe_allow_html=True)
+with _fc_sum_cols[2]:
+    _best_dim = max(_series_dict.keys(),
+                    key=lambda k: _forecast_series(_series_dict[k], _fc_months)[1].sum()
+                    if _forecast_series(_series_dict[k], _fc_months)[1] is not None else 0)
+    st.markdown(f"""
+    <div class="insight-card">
+      <div class="icon">🏆</div>
+      <div class="label">Highest Forecast Contributor</div>
+      <div class="value">{_best_dim}</div>
+      <div class="detail">Expected to lead in revenue over the forecast window.</div>
+    </div>""", unsafe_allow_html=True)
