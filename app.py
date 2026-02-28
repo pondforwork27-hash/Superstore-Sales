@@ -437,6 +437,8 @@ st.markdown("---")
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
 all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
+_map_total = all_state_sales['Sales'].sum()
+all_state_sales['Share'] = all_state_sales['Sales'] / _map_total * 100
 
 if not st.session_state.clicked_state and not st.session_state.sel_region_card:
     st.markdown("""<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;align-items:center;">
@@ -483,16 +485,22 @@ if _sel_regions:
         all_state_sales, locations='State Code', locationmode="USA-states",
         color='Sales', scope="usa", hover_name='State',
         color_continuous_scale=[[0,'rgba(40,40,60,0.5)'],[1,'rgba(80,80,100,0.5)']],
-        labels={'Sales': 'Total Sales ($)'}
+        labels={'Sales': 'Total Sales ($)'},
+        custom_data=['Share']
     )
     fig_map.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>",
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "Total Sales: $%{z:,.0f}<br>"
+            "Revenue Share: %{customdata[0]:.1f}%"
+            "<extra></extra>"
+        ),
         marker_line_color='rgba(100,100,120,0.3)', marker_line_width=0.5
     )
     for _sreg in _sel_regions:
         _reg_df = all_state_sales[all_state_sales['State'].isin(
             df[df['Region'] == _sreg]['State'].unique()
-        )]
+        )].copy()
         if not _reg_df.empty:
             _fcol   = _region_fill_colors.get(_sreg, [[0,'rgba(255,255,255,0.1)'],[1,'rgba(255,255,255,0.5)']])
             _bcol   = _region_border_colors.get(_sreg, '#ffffff')
@@ -505,16 +513,31 @@ if _sel_regions:
                 marker_line_color=_bcol,
                 marker_line_width=2.5,
                 text=_reg_df['State'].tolist(),
-                hovertemplate="<b>%{text}</b><br>Sales: $%{z:,.0f}<br>Region: " + _sreg + "<extra></extra>",
+                customdata=_reg_df[['Share']].values,
+                hovertemplate=(
+                    "<b>%{text}</b><br>"
+                    "Sales: $%{z:,.0f}<br>"
+                    "Revenue Share: %{customdata[0]:.1f}%<br>"
+                    "Region: " + _sreg +
+                    "<extra></extra>"
+                ),
                 name=_sreg,
             ))
 else:
     fig_map = px.choropleth(
         all_state_sales, locations='State Code', locationmode="USA-states",
         color='Sales', scope="usa", hover_name='State',
-        color_continuous_scale="Blues", labels={'Sales': 'Total Sales ($)'}
+        color_continuous_scale="Blues", labels={'Sales': 'Total Sales ($)'},
+        custom_data=['Share']
     )
-    fig_map.update_traces(hovertemplate="<b>%{hovertext}</b><br>Total Sales: $%{z:,.0f}<extra></extra>")
+    fig_map.update_traces(
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "Total Sales: $%{z:,.0f}<br>"
+            "Revenue Share: %{customdata[0]:.1f}%"
+            "<extra></extra>"
+        )
+    )
 
 if st.session_state.clicked_state:
     _hl = all_state_sales[all_state_sales['State'] == st.session_state.clicked_state]
