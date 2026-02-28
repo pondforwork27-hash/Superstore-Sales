@@ -283,7 +283,13 @@ st.markdown("---")
 st.subheader("🌎 Filter by Region")
 st.caption("Click a card to filter — click again to deselect. Multiple regions can be active.")
 
-_all_region_stats = df.groupby('Region').agg(
+# Apply year / category / segment filters so cards stay in sync with the filter bar
+_card_base = df.copy()
+if sel_year:     _card_base = _card_base[_card_base['Year'].isin(sel_year)]
+if sel_category: _card_base = _card_base[_card_base['Category'].isin(sel_category)]
+if sel_segment:  _card_base = _card_base[_card_base['Segment'].isin(sel_segment)]
+
+_all_region_stats = _card_base.groupby('Region').agg(
     Sales=('Sales', 'sum'),
     Orders=('Order ID', 'nunique'),
 ).reset_index().sort_values('Sales', ascending=False).reset_index(drop=True)
