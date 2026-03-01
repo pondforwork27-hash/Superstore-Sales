@@ -590,6 +590,14 @@ _conc_color        = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share
 _conc_dot          = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
 _leader_share_bar  = min(state_share * 3.5, 100)
 
+# Pre-compute pip HTML outside f-string to avoid nested quote conflicts
+_pip_html = ''.join([
+    '<div style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:' +
+    ('#9f7aea' if i < _above_avg_states else 'rgba(255,255,255,0.06)') +
+    ';"></div>'
+    for i in range(min(_n_active_states, 30))
+])
+
 st.markdown(f"""
 <style>
 @keyframes shimmer {{
@@ -760,10 +768,7 @@ st.markdown(f"""
       <div class="geo-sub-value" style="color:#9f7aea;">States above avg</div>
       <!-- segmented pip bar -->
       <div style="margin-top:12px;display:flex;gap:2px;flex-wrap:wrap;">
-        {''.join([
-          f'<div style="width:8px;height:8px;border-radius:2px;background:{"#9f7aea" if i < _above_avg_states else "rgba(255,255,255,0.06)"};"></div>'
-          for i in range(min(_n_active_states, 30))
-        ])}
+        {_pip_html}
       </div>
       <div class="geo-foot" style="margin-top:8px;">
         {_pct_above:.0f}% outperforming avg ${_avg_state_sales/1000:.0f}K
