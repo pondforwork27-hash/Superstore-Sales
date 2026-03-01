@@ -291,10 +291,13 @@ if sel_year:     _card_base = _card_base[_card_base['Year'].isin(sel_year)]
 if sel_category: _card_base = _card_base[_card_base['Category'].isin(sel_category)]
 if sel_segment:  _card_base = _card_base[_card_base['Segment'].isin(sel_segment)]
 
+# ── UPDATED: include Profit in region aggregation ──────────────────────────
 _all_region_stats = _card_base.groupby('Region').agg(
     Sales=('Sales', 'sum'),
     Orders=('Order ID', 'nunique'),
+    Profit=('Profit', 'sum'),
 ).reset_index().sort_values('Sales', ascending=False).reset_index(drop=True)
+
 _grand_total = _all_region_stats['Sales'].sum()
 
 _region_meta = {
@@ -311,11 +314,15 @@ for _idx, _row in _all_region_stats.iterrows():
     _region   = _row['Region']
     _sales    = _row['Sales']
     _orders   = int(_row['Orders'])
+    _profit   = _row['Profit']
+    _margin   = _profit / _sales * 100 if _sales else 0
     _share    = _sales / _grand_total * 100 if _grand_total else 0
     _icon     = _region_meta[_region][0]
     _is_act   = _region in st.session_state.sel_region_card
     _check    = "  ✓" if _is_act else ""
-    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_orders:,} orders · {_share:.1f}%"
+    _m_arrow  = "▲" if _margin >= 0 else "▼"
+    # ── UPDATED label: shows profit margin % instead of order count ──────
+    _label    = f"{_icon}  {_region}{_check}\n${_sales:,.0f}\n{_m_arrow} {_margin:.1f}% margin · {_share:.1f}%"
 
     with _rc_cols[_idx]:
         if st.button(_label, key=f"rcard_{_region}", use_container_width=True):
@@ -447,7 +454,6 @@ _gmf_labels = {
 }
 
 # Map base: respect year/category/segment but NOT region-card or clicked_state
-# so all states remain visible on the map for geographic context
 _map_base = df.copy()
 if sel_year:     _map_base = _map_base[_map_base['Year'].isin(sel_year)]
 if sel_category: _map_base = _map_base[_map_base['Category'].isin(sel_category)]
@@ -639,7 +645,6 @@ _conc_color        = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share
 _conc_dot          = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
 _leader_share_bar  = min(state_share * 3.5, 100)
 
-# Pre-compute all values used in banner f-string to avoid quote/expression conflicts
 _ts_name   = top_state['State']
 _ts_sales  = top_state['Sales']
 _bs_name   = _bottom_state['State']
@@ -648,7 +653,6 @@ _bs_pct    = max(_bottom_state['Sales'] / top_state['Sales'] * 100, 1.5) if top_
 _avg_pct   = min(_avg_state_sales / top_state['Sales'] * 100, 100) if top_state['Sales'] else 0
 _avg_share = _avg_state_sales / total_sales * 100 if total_sales else 0
 
-# Pre-compute pip HTML outside f-string to avoid nested quote conflicts
 _pip_html = ''.join([
     '<div style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:' +
     ('#9f7aea' if i < _above_avg_states else 'rgba(255,255,255,0.06)') +
@@ -758,7 +762,6 @@ _stc.html(_geo_html, height=310, scrolling=False)
 # ── Hidden trigger buttons (CSS-hidden, clicked programmatically via JS) ──────
 _gmf = st.session_state.geo_map_filter
 
-# Hide all 4 geo trigger buttons with CSS
 st.markdown("""<style>
 button[data-testid="baseButton-secondary"][kind="secondary"]:is(
   [id*="geo_btn_leader"],[id*="geo_btn_top5"],[id*="geo_btn_above_avg"],[id*="geo_btn_weakest"]
@@ -783,7 +786,6 @@ with _ghcols[3]:
         st.session_state.geo_map_filter = None if _gmf == "weakest" else "weakest"
         st.rerun()
 
-# JS: listen for postMessage from iframe and click the matching hidden button
 import streamlit.components.v1 as _stcv2
 _stcv2.html("""<script>
 (function() {
@@ -827,7 +829,6 @@ _stcv2.html("""<script>
 })();
 </script>""", height=0)
 
-# Active filter badge + clear button
 if _gmf:
     _lbl = {"leader":"👑 Revenue Leader","top5":"🎯 Top-5 States","above_avg":"📈 Above-Average States","weakest":"⚠️ Needs Attention"}
     _clr = {"leader":"#4299e1","top5":"#ed8936","above_avg":"#9f7aea","weakest":"#e94560"}
@@ -1320,7 +1321,6 @@ with _fc_col1:
     )
     st.plotly_chart(fig_fc, use_container_width=True, key="fc_chart")
 
-# Forecast summary cards
 _avg_growth = np.mean(_fc_growth_pcts) if _fc_growth_pcts else 0
 _growth_cls = "good" if _avg_growth >= 0 else "alert"
 _growth_arrow = "▲" if _avg_growth >= 0 else "▼"
@@ -1361,8 +1361,6 @@ st.markdown("---")
 # ── CITIES TABLE ──────────────────────────────────────────────────────────────
 st.header("🏙️ Top Cities by Sales")
 
-# City table uses filtered_df which already has all active filters applied
-# (year, category, segment, region cards, clicked state)
 _city_base = filtered_df
 
 _agg = _city_base.groupby(['City', 'State']).agg(
