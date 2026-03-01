@@ -610,7 +610,10 @@ if _gmf:
             locations=_hl_df['State Code'].tolist(),
             z=_hl_df['Sales'].tolist(),
             locationmode="USA-states",
-            colorscale=[[0, _hl_color + '55'], [1, _hl_color + 'cc']],
+            colorscale=[
+                [0, f'rgba({int(_hl_color[1:3],16)},{int(_hl_color[3:5],16)},{int(_hl_color[5:7],16)},0.25)'],
+                [1, f'rgba({int(_hl_color[1:3],16)},{int(_hl_color[3:5],16)},{int(_hl_color[5:7],16)},0.7)'],
+            ],
             showscale=False,
             marker_line_color=_hl_color,
             marker_line_width=3,
@@ -770,39 +773,79 @@ _geo_html = (
 
 _stc.html(_geo_html, height=230, scrolling=False)
 
-# ── Clickable filter buttons matching each card ───────────────────────────────
+# ── Hidden trigger buttons (CSS-hidden, clicked programmatically via JS) ──────
 _gmf = st.session_state.geo_map_filter
-_btn_configs = [
-    ("leader",    "👑 Revenue Leader",    "#4299e1", "#0d2240"),
-    ("top5",      "🎯 Top-5 States",      "#ed8936", "#2a1500"),
-    ("above_avg", "📈 Above Average",     "#9f7aea", "#1e0f38"),
-    ("weakest",   "⚠️ Needs Attention",   "#e94560", "#2a0a0f"),
-]
-_btn_cols = st.columns(4)
-for _col, (_fkey, _flabel, _fcolor, _fbg) in zip(_btn_cols, _btn_configs):
-    _is_active = (_gmf == _fkey)
-    _border = f"3px solid {_fcolor}" if _is_active else f"1px solid {_fcolor}44"
-    _opacity = "1" if _is_active else "0.6"
-    _col.markdown(f"""<style>
-div[data-testid="stButton"]:has(button[key="gfbtn_{_fkey}"]) button {{
-    background:{_fbg} !important;
-    border:{_border} !important;
-    border-radius:8px !important;
-    color:{_fcolor} !important;
-    font-weight:700 !important;
-    font-size:0.78rem !important;
-    opacity:{_opacity} !important;
-    width:100% !important;
-    padding:8px 4px !important;
-    transition:all 0.15s !important;
-}}
-</style>""", unsafe_allow_html=True)
-    with _col:
-        if st.button(_flabel, key=f"gfbtn_{_fkey}", use_container_width=True):
-            st.session_state.geo_map_filter = None if _gmf == _fkey else _fkey
-            st.rerun()
 
-# Active filter badge
+# Hide all 4 geo trigger buttons with CSS
+st.markdown("""<style>
+button[data-testid="baseButton-secondary"][kind="secondary"]:is(
+  [id*="geo_btn_leader"],[id*="geo_btn_top5"],[id*="geo_btn_above_avg"],[id*="geo_btn_weakest"]
+) { display:none !important; }
+</style>""", unsafe_allow_html=True)
+
+_ghcols = st.columns(4)
+with _ghcols[0]:
+    if st.button("geo_btn_leader",    key="geo_btn_leader",    use_container_width=True):
+        st.session_state.geo_map_filter = None if _gmf == "leader" else "leader"
+        st.rerun()
+with _ghcols[1]:
+    if st.button("geo_btn_top5",      key="geo_btn_top5",      use_container_width=True):
+        st.session_state.geo_map_filter = None if _gmf == "top5" else "top5"
+        st.rerun()
+with _ghcols[2]:
+    if st.button("geo_btn_above_avg", key="geo_btn_above_avg", use_container_width=True):
+        st.session_state.geo_map_filter = None if _gmf == "above_avg" else "above_avg"
+        st.rerun()
+with _ghcols[3]:
+    if st.button("geo_btn_weakest",   key="geo_btn_weakest",   use_container_width=True):
+        st.session_state.geo_map_filter = None if _gmf == "weakest" else "weakest"
+        st.rerun()
+
+# JS: listen for postMessage from iframe and click the matching hidden button
+import streamlit.components.v1 as _stcv2
+_stcv2.html("""<script>
+(function() {
+  var MAP = {
+    leader:    'geo_btn_leader',
+    top5:      'geo_btn_top5',
+    above_avg: 'geo_btn_above_avg',
+    weakest:   'geo_btn_weakest'
+  };
+  function hideAll() {
+    var doc = window.parent.document;
+    Object.values(MAP).forEach(function(label) {
+      doc.querySelectorAll('button').forEach(function(b) {
+        if (b.innerText && b.innerText.trim() === label) {
+          b.style.setProperty('display','none','important');
+          if (b.parentElement) b.parentElement.style.setProperty('display','none','important');
+          if (b.parentElement && b.parentElement.parentElement)
+            b.parentElement.parentElement.style.setProperty('display','none','important');
+        }
+      });
+    });
+  }
+  hideAll();
+  new MutationObserver(hideAll).observe(window.parent.document.body, {childList:true, subtree:true});
+
+  window.parent.addEventListener('message', function(e) {
+    if (!e.data || !e.data.geoFilter) return;
+    var label = MAP[e.data.geoFilter];
+    if (!label) return;
+    var doc = window.parent.document;
+    doc.querySelectorAll('button').forEach(function(b) {
+      if (b.innerText && b.innerText.trim() === label) {
+        b.style.removeProperty('display');
+        if (b.parentElement) b.parentElement.style.removeProperty('display');
+        if (b.parentElement && b.parentElement.parentElement)
+          b.parentElement.parentElement.style.removeProperty('display');
+        b.click();
+      }
+    });
+  });
+})();
+</script>""", height=0)
+
+# Active filter badge + clear button
 if _gmf:
     _lbl = {"leader":"👑 Revenue Leader","top5":"🎯 Top-5 States","above_avg":"📈 Above-Average States","weakest":"⚠️ Needs Attention"}
     _clr = {"leader":"#4299e1","top5":"#ed8936","above_avg":"#9f7aea","weakest":"#e94560"}
