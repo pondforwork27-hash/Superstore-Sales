@@ -577,102 +577,213 @@ if map_event and map_event.selection and map_event.selection.get("points"):
 
 # ── Smart map insight banner ──────────────────────────────────────────────────
 _n_active_states   = len(state_sales[state_sales['Sales'] > 0])
-_top5_share        = state_sales.nlargest(5, 'Sales')['Sales'].sum() / total_sales * 100 if total_sales else 0
+_top5_states       = state_sales.nlargest(5, 'Sales')
+_top5_share        = _top5_states['Sales'].sum() / total_sales * 100 if total_sales else 0
+_top5_names        = " · ".join(_top5_states['State'].str[:2].tolist())
 _bottom_state      = state_sales.sort_values('Sales').iloc[0]
 _avg_state_sales   = state_sales['Sales'].mean()
 _above_avg_states  = len(state_sales[state_sales['Sales'] > _avg_state_sales])
-_concentration_lbl = "Highly Concentrated" if _top5_share > 60 else "Moderately Spread" if _top5_share > 40 else "Well Distributed"
-_concentration_cls = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
+_pct_above         = _above_avg_states / _n_active_states * 100 if _n_active_states else 0
+_gap_ratio         = top_state['Sales'] / _bottom_state['Sales'] if _bottom_state['Sales'] > 0 else 0
+_conc_lbl          = "High Risk — over-reliance on few states" if _top5_share > 60 else "Moderate — healthy regional spread" if _top5_share > 40 else "Low — well diversified across states"
+_conc_color        = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
+_conc_dot          = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
+_leader_share_bar  = min(state_share * 3.5, 100)
 
 st.markdown(f"""
-<div style="
-    background: linear-gradient(135deg, #0a1628 0%, #0f2040 50%, #0a1628 100%);
-    border: 1px solid #1e3a5f;
-    border-radius: 14px;
-    padding: 20px 24px;
-    margin-bottom: 10px;
-    position: relative;
-    overflow: hidden;
-">
-  <!-- Glow accent -->
-  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
-    background:radial-gradient(circle, rgba(66,153,225,0.12) 0%, transparent 70%);
-    pointer-events:none;"></div>
+<style>
+@keyframes shimmer {{
+  0%   {{ background-position: -200% center; }}
+  100% {{ background-position:  200% center; }}
+}}
+.geo-banner {{
+  background: linear-gradient(160deg, #080f1e 0%, #0c1a30 60%, #080f1e 100%);
+  border: 1px solid #162640;
+  border-radius: 16px;
+  padding: 22px 26px 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}}
+.geo-banner::before {{
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 0%, rgba(66,153,225,0.07) 0%, transparent 60%),
+              radial-gradient(ellipse at 10% 100%, rgba(99,179,237,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}}
+.geo-header {{
+  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+}}
+.geo-title-accent {{
+  width: 3px; height: 18px;
+  background: linear-gradient(180deg, #4299e1, #63b3ed);
+  border-radius: 2px; flex-shrink: 0;
+}}
+.geo-title {{
+  font-size: 0.68rem; font-weight: 800; color: #4299e1;
+  text-transform: uppercase; letter-spacing: 0.18em;
+}}
+.geo-badge {{
+  margin-left: auto;
+  background: rgba(66,153,225,0.08);
+  border: 1px solid #1e3a5f;
+  border-radius: 20px; padding: 2px 10px;
+  font-size: 0.68rem; color: #90cdf4; font-weight: 600;
+  letter-spacing: 0.04em;
+}}
+.geo-grid {{
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px;
+}}
+.geo-card {{
+  border-radius: 12px; padding: 16px 14px 14px;
+  position: relative; overflow: hidden;
+}}
+.geo-card-primary {{
+  background: linear-gradient(145deg, #0d2240, #112a50);
+  border: 1px solid #1e4a80;
+}}
+.geo-card-neutral {{
+  background: rgba(255,255,255,0.025);
+  border: 1px solid #162640;
+}}
+.geo-card-danger {{
+  background: rgba(233,69,96,0.04);
+  border: 1px solid #3d1020;
+}}
+.geo-eyebrow {{
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.13em; color: #4a6580; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 5px;
+}}
+.geo-eyebrow-dot {{
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}}
+.geo-main-value {{
+  font-size: 1.3rem; font-weight: 800; color: #fff;
+  line-height: 1.1; letter-spacing: -0.02em;
+}}
+.geo-sub-value {{
+  font-size: 0.78rem; font-weight: 600; margin-top: 3px;
+}}
+.geo-track {{
+  margin-top: 12px; background: rgba(255,255,255,0.05);
+  border-radius: 99px; height: 3px; overflow: hidden;
+}}
+.geo-fill {{
+  height: 3px; border-radius: 99px;
+}}
+.geo-foot {{
+  font-size: 0.67rem; color: #4a6580; margin-top: 7px; font-weight: 500;
+}}
+.geo-divider {{
+  width: 1px; background: linear-gradient(180deg, transparent, #1e3a5f 30%, #1e3a5f 70%, transparent);
+  margin: 0 2px;
+}}
+</style>
 
-  <!-- Header row -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-    <div style="width:6px;height:28px;background:linear-gradient(180deg,#4299e1,#63b3ed);border-radius:3px;"></div>
-    <span style="color:#63b3ed;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;">
-      Geographic Intelligence
-    </span>
-    <div style="margin-left:auto;background:rgba(66,153,225,0.1);border:1px solid #2d5a8a;
-      border-radius:20px;padding:3px 10px;">
-      <span style="color:#90cdf4;font-size:0.72rem;">{_n_active_states} active states</span>
-    </div>
+<div class="geo-banner">
+  <div class="geo-header">
+    <div class="geo-title-accent"></div>
+    <span class="geo-title">Geographic Revenue Intelligence</span>
+    <span class="geo-badge">⬡ {_n_active_states} states · {len(state_sales)} markets</span>
   </div>
 
-  <!-- 4-stat grid -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+  <div class="geo-grid">
 
-    <!-- Stat 1: Top state -->
-    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
-      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
-        👑 Revenue Leader
+    <!-- PRIMARY: Revenue Leader — wider card -->
+    <div class="geo-card geo-card-primary">
+      <!-- shimmer line at top -->
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,transparent,#4299e1,#90cdf4,transparent);
+        background-size:200%;animation:shimmer 3s linear infinite;"></div>
+
+      <div class="geo-eyebrow">
+        <div class="geo-eyebrow-dot" style="background:#4299e1;"></div>
+        Revenue Leader
       </div>
-      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{top_state['State']}</div>
-      <div style="color:#48bb78;font-size:0.8rem;margin-top:4px;font-weight:600;">
-        ${top_state['Sales']:,.0f}
+      <div class="geo-main-value">{top_state['State']}</div>
+      <div class="geo-sub-value" style="color:#48bb78;">${top_state['Sales']:,.0f}</div>
+
+      <!-- stacked mini bars: leader vs avg -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="color:#4a6580;font-size:0.6rem;width:32px;flex-shrink:0;">Leader</span>
+          <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:99px;height:4px;">
+            <div style="width:100%;height:4px;background:linear-gradient(90deg,#4299e1,#90cdf4);border-radius:99px;"></div>
+          </div>
+          <span style="color:#90cdf4;font-size:0.6rem;width:28px;text-align:right;">{state_share:.1f}%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="color:#4a6580;font-size:0.6rem;width:32px;flex-shrink:0;">Avg</span>
+          <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:99px;height:4px;">
+            <div style="width:{_avg_state_sales/top_state['Sales']*100:.0f}%;height:4px;background:rgba(66,153,225,0.35);border-radius:99px;"></div>
+          </div>
+          <span style="color:#4a6580;font-size:0.6rem;width:28px;text-align:right;">{_avg_state_sales/total_sales*100:.1f}%</span>
+        </div>
       </div>
-      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
-        <div style="width:{min(state_share*2, 100):.0f}%;height:4px;background:linear-gradient(90deg,#4299e1,#63b3ed);border-radius:4px;"></div>
+      <div class="geo-foot" style="margin-top:10px;">
+        {_gap_ratio:.0f}× larger than weakest state
       </div>
-      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">{state_share:.1f}% of total</div>
     </div>
 
-    <!-- Stat 2: Top-5 concentration -->
-    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
-      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
-        🎯 Top-5 Concentration
+    <!-- Concentration -->
+    <div class="geo-card geo-card-neutral">
+      <div class="geo-eyebrow">
+        <div class="geo-eyebrow-dot" style="background:{_conc_dot};"></div>
+        Concentration
       </div>
-      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_top5_share:.1f}%</div>
-      <div style="font-size:0.78rem;margin-top:4px;font-weight:600;color:{_concentration_cls};">
-        {_concentration_lbl}
+      <div class="geo-main-value">{_top5_share:.0f}<span style="font-size:0.75rem;color:#718096;font-weight:500;">%</span></div>
+      <div class="geo-sub-value" style="color:{_conc_color};">Top-5 share</div>
+      <!-- Donut-style arc via conic gradient -->
+      <div style="margin-top:12px;width:54px;height:54px;border-radius:50%;
+        background:conic-gradient({_conc_color} 0% {_top5_share:.0f}%, rgba(255,255,255,0.06) {_top5_share:.0f}% 100%);
+        display:flex;align-items:center;justify-content:center;">
+        <div style="width:38px;height:38px;border-radius:50%;background:#0c1a30;
+          display:flex;align-items:center;justify-content:center;
+          font-size:0.65rem;font-weight:700;color:{_conc_color};">
+          {_top5_share:.0f}%
+        </div>
       </div>
-      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
-        <div style="width:{_top5_share:.0f}%;height:4px;background:linear-gradient(90deg,{_concentration_cls},{_concentration_cls}88);border-radius:4px;"></div>
+      <div class="geo-foot" style="margin-top:8px;color:{_conc_color};font-size:0.63rem;">
+        {_conc_lbl}
       </div>
-      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">5 states drive majority</div>
     </div>
 
-    <!-- Stat 3: States above average -->
-    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
-      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
-        📈 Above-Average States
+    <!-- Market spread -->
+    <div class="geo-card geo-card-neutral">
+      <div class="geo-eyebrow">
+        <div class="geo-eyebrow-dot" style="background:#9f7aea;"></div>
+        Market Spread
       </div>
-      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_above_avg_states} <span style="font-size:0.8rem;color:#718096;">/ {_n_active_states}</span></div>
-      <div style="color:#ed8936;font-size:0.78rem;margin-top:4px;font-weight:600;">
-        Avg ${_avg_state_sales:,.0f}
+      <div class="geo-main-value">{_above_avg_states}<span style="font-size:0.75rem;color:#718096;font-weight:400;"> /{_n_active_states}</span></div>
+      <div class="geo-sub-value" style="color:#9f7aea;">States above avg</div>
+      <!-- segmented pip bar -->
+      <div style="margin-top:12px;display:flex;gap:2px;flex-wrap:wrap;">
+        {''.join([
+          f'<div style="width:8px;height:8px;border-radius:2px;background:{"#9f7aea" if i < _above_avg_states else "rgba(255,255,255,0.06)"};"></div>'
+          for i in range(min(_n_active_states, 30))
+        ])}
       </div>
-      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
-        <div style="width:{_above_avg_states/_n_active_states*100 if _n_active_states else 0:.0f}%;height:4px;background:linear-gradient(90deg,#ed8936,#f6ad55);border-radius:4px;"></div>
+      <div class="geo-foot" style="margin-top:8px;">
+        {_pct_above:.0f}% outperforming avg ${_avg_state_sales/1000:.0f}K
       </div>
-      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">{_above_avg_states/_n_active_states*100 if _n_active_states else 0:.0f}% outperforming</div>
     </div>
 
-    <!-- Stat 4: Weakest link -->
-    <div style="background:rgba(233,69,96,0.06);border:1px solid #3d1a22;border-radius:10px;padding:14px 12px;">
-      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
-        ⚠️ Lowest Performer
+    <!-- Weakest -->
+    <div class="geo-card geo-card-danger">
+      <div class="geo-eyebrow">
+        <div class="geo-eyebrow-dot" style="background:#e94560;"></div>
+        Needs Attention
       </div>
-      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_bottom_state['State']}</div>
-      <div style="color:#e94560;font-size:0.8rem;margin-top:4px;font-weight:600;">
-        ${_bottom_state['Sales']:,.0f}
+      <div class="geo-main-value" style="font-size:1.05rem;">{_bottom_state['State']}</div>
+      <div class="geo-sub-value" style="color:#e94560;">${_bottom_state['Sales']:,.0f}</div>
+      <div class="geo-track" style="margin-top:12px;">
+        <div class="geo-fill" style="width:{max(_bottom_state['Sales']/top_state['Sales']*100, 1.5) if top_state['Sales'] else 0:.1f}%;
+          background:linear-gradient(90deg,#e94560,#fc8181);"></div>
       </div>
-      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
-        <div style="width:{_bottom_state['Sales']/top_state['Sales']*100 if top_state['Sales'] else 0:.1f}%;height:4px;background:linear-gradient(90deg,#e94560,#fc8181);border-radius:4px;"></div>
-      </div>
-      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">
-        {_bottom_state['Sales']/top_state['Sales']*100 if top_state['Sales'] else 0:.1f}% of leader's sales
+      <div class="geo-foot" style="margin-top:8px;">
+        Only {_bottom_state['Sales']/top_state['Sales']*100 if top_state['Sales'] else 0:.1f}% of leader — high opportunity gap
       </div>
     </div>
 
