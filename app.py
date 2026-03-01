@@ -176,6 +176,13 @@ def load_data():
 
 df = load_data()
 
+# ── Debug: show actual column names if Profit is missing ─────────────────────
+if 'Profit' not in df.columns:
+    _profit_candidates = [c for c in df.columns if 'profit' in c.lower() or 'margin' in c.lower()]
+    if _profit_candidates:
+        # Auto-rename the first match to 'Profit'
+        df = df.rename(columns={_profit_candidates[0]: 'Profit'})
+
 # ── Session state init ────────────────────────────────────────────────────────
 defaults = {
     'clicked_state':  None,
@@ -291,12 +298,20 @@ if sel_year:     _card_base = _card_base[_card_base['Year'].isin(sel_year)]
 if sel_category: _card_base = _card_base[_card_base['Category'].isin(sel_category)]
 if sel_segment:  _card_base = _card_base[_card_base['Segment'].isin(sel_segment)]
 
-# ── UPDATED: include Profit in region aggregation ──────────────────────────
+# ── UPDATED: include Profit in region aggregation (safe fallback) ──────────
+_has_profit = 'Profit' in _card_base.columns
+_profit_col = next((c for c in _card_base.columns if c.strip().lower() == 'profit'), None)
+
+_agg_kwargs = dict(Sales=('Sales', 'sum'), Orders=('Order ID', 'nunique'))
+if _profit_col:
+    _agg_kwargs['Profit'] = (_profit_col, 'sum')
+
 _all_region_stats = _card_base.groupby('Region').agg(
-    Sales=('Sales', 'sum'),
-    Orders=('Order ID', 'nunique'),
-    Profit=('Profit', 'sum'),
+    **_agg_kwargs
 ).reset_index().sort_values('Sales', ascending=False).reset_index(drop=True)
+
+if 'Profit' not in _all_region_stats.columns:
+    _all_region_stats['Profit'] = 0
 
 _grand_total = _all_region_stats['Sales'].sum()
 
