@@ -94,6 +94,51 @@ span[data-baseweb="tag"] [role="presentation"] svg { fill: #d0eeff !important; }
 }
 .insight-card .value { font-size:1.35rem; font-weight:700; color:#fff; }
 .insight-card .detail { font-size:0.82rem; color:#90cdf4; margin-top:3px; line-height:1.5; }
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.geo-banner {
+  background: linear-gradient(160deg, #080f1e 0%, #0c1a30 60%, #080f1e 100%);
+  border: 1px solid #162640; border-radius: 16px;
+  padding: 22px 26px 18px; margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+.geo-banner::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 0%, rgba(66,153,225,0.07) 0%, transparent 60%),
+              radial-gradient(ellipse at 10% 100%, rgba(99,179,237,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+.geo-header { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.geo-title-accent {
+  width:3px; height:18px;
+  background:linear-gradient(180deg,#4299e1,#63b3ed);
+  border-radius:2px; flex-shrink:0;
+}
+.geo-title { font-size:0.68rem; font-weight:800; color:#4299e1; text-transform:uppercase; letter-spacing:0.18em; }
+.geo-badge {
+  margin-left:auto; background:rgba(66,153,225,0.08); border:1px solid #1e3a5f;
+  border-radius:20px; padding:2px 10px;
+  font-size:0.68rem; color:#90cdf4; font-weight:600; letter-spacing:0.04em;
+}
+.geo-grid { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:10px; }
+.geo-card { border-radius:12px; padding:16px 14px 14px; position:relative; overflow:hidden; }
+.geo-card-primary { background:linear-gradient(145deg,#0d2240,#112a50); border:1px solid #1e4a80; }
+.geo-card-neutral { background:rgba(255,255,255,0.025); border:1px solid #162640; }
+.geo-card-danger  { background:rgba(233,69,96,0.04); border:1px solid #3d1020; }
+.geo-eyebrow {
+  font-size:0.6rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.13em; color:#4a6580; margin-bottom:10px;
+  display:flex; align-items:center; gap:5px;
+}
+.geo-eyebrow-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.geo-main-value { font-size:1.3rem; font-weight:800; color:#fff; line-height:1.1; letter-spacing:-0.02em; }
+.geo-sub-value  { font-size:0.78rem; font-weight:600; margin-top:3px; }
+.geo-track { margin-top:12px; background:rgba(255,255,255,0.05); border-radius:99px; height:3px; overflow:hidden; }
+.geo-fill  { height:3px; border-radius:99px; }
+.geo-foot  { font-size:0.67rem; color:#4a6580; margin-top:7px; font-weight:500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -599,97 +644,6 @@ _pip_html = ''.join([
 ])
 
 st.markdown(f"""
-<style>
-@keyframes shimmer {{
-  0%   {{ background-position: -200% center; }}
-  100% {{ background-position:  200% center; }}
-}}
-.geo-banner {{
-  background: linear-gradient(160deg, #080f1e 0%, #0c1a30 60%, #080f1e 100%);
-  border: 1px solid #162640;
-  border-radius: 16px;
-  padding: 22px 26px 18px;
-  margin-bottom: 12px;
-  position: relative;
-  overflow: hidden;
-}}
-.geo-banner::before {{
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 80% 0%, rgba(66,153,225,0.07) 0%, transparent 60%),
-              radial-gradient(ellipse at 10% 100%, rgba(99,179,237,0.04) 0%, transparent 50%);
-  pointer-events: none;
-}}
-.geo-header {{
-  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
-}}
-.geo-title-accent {{
-  width: 3px; height: 18px;
-  background: linear-gradient(180deg, #4299e1, #63b3ed);
-  border-radius: 2px; flex-shrink: 0;
-}}
-.geo-title {{
-  font-size: 0.68rem; font-weight: 800; color: #4299e1;
-  text-transform: uppercase; letter-spacing: 0.18em;
-}}
-.geo-badge {{
-  margin-left: auto;
-  background: rgba(66,153,225,0.08);
-  border: 1px solid #1e3a5f;
-  border-radius: 20px; padding: 2px 10px;
-  font-size: 0.68rem; color: #90cdf4; font-weight: 600;
-  letter-spacing: 0.04em;
-}}
-.geo-grid {{
-  display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px;
-}}
-.geo-card {{
-  border-radius: 12px; padding: 16px 14px 14px;
-  position: relative; overflow: hidden;
-}}
-.geo-card-primary {{
-  background: linear-gradient(145deg, #0d2240, #112a50);
-  border: 1px solid #1e4a80;
-}}
-.geo-card-neutral {{
-  background: rgba(255,255,255,0.025);
-  border: 1px solid #162640;
-}}
-.geo-card-danger {{
-  background: rgba(233,69,96,0.04);
-  border: 1px solid #3d1020;
-}}
-.geo-eyebrow {{
-  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.13em; color: #4a6580; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 5px;
-}}
-.geo-eyebrow-dot {{
-  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
-}}
-.geo-main-value {{
-  font-size: 1.3rem; font-weight: 800; color: #fff;
-  line-height: 1.1; letter-spacing: -0.02em;
-}}
-.geo-sub-value {{
-  font-size: 0.78rem; font-weight: 600; margin-top: 3px;
-}}
-.geo-track {{
-  margin-top: 12px; background: rgba(255,255,255,0.05);
-  border-radius: 99px; height: 3px; overflow: hidden;
-}}
-.geo-fill {{
-  height: 3px; border-radius: 99px;
-}}
-.geo-foot {{
-  font-size: 0.67rem; color: #4a6580; margin-top: 7px; font-weight: 500;
-}}
-.geo-divider {{
-  width: 1px; background: linear-gradient(180deg, transparent, #1e3a5f 30%, #1e3a5f 70%, transparent);
-  margin: 0 2px;
-}}
-</style>
-
 <div class="geo-banner">
   <div class="geo-header">
     <div class="geo-title-accent"></div>
