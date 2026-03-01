@@ -575,13 +575,108 @@ if map_event and map_event.selection and map_event.selection.get("points"):
             st.session_state.clicked_state = None
             st.rerun()
 
+# ── Smart map insight banner ──────────────────────────────────────────────────
+_n_active_states   = len(state_sales[state_sales['Sales'] > 0])
+_top5_share        = state_sales.nlargest(5, 'Sales')['Sales'].sum() / total_sales * 100 if total_sales else 0
+_bottom_state      = state_sales.sort_values('Sales').iloc[0]
+_avg_state_sales   = state_sales['Sales'].mean()
+_above_avg_states  = len(state_sales[state_sales['Sales'] > _avg_state_sales])
+_concentration_lbl = "Highly Concentrated" if _top5_share > 60 else "Moderately Spread" if _top5_share > 40 else "Well Distributed"
+_concentration_cls = "#e94560" if _top5_share > 60 else "#ed8936" if _top5_share > 40 else "#48bb78"
+
 st.markdown(f"""
-<div class="insight-card">
-  <div class="icon">📌</div>
-  <div class="label">Map Insight</div>
-  <div class="value">{top_state['State']} leads all states</div>
-  <div class="detail">Generating <strong>${top_state['Sales']:,.0f}</strong> in sales —
-  <strong>{state_share:.1f}%</strong> of total revenue in this selection.</div>
+<div style="
+    background: linear-gradient(135deg, #0a1628 0%, #0f2040 50%, #0a1628 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+">
+  <!-- Glow accent -->
+  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+    background:radial-gradient(circle, rgba(66,153,225,0.12) 0%, transparent 70%);
+    pointer-events:none;"></div>
+
+  <!-- Header row -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <div style="width:6px;height:28px;background:linear-gradient(180deg,#4299e1,#63b3ed);border-radius:3px;"></div>
+    <span style="color:#63b3ed;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;">
+      Geographic Intelligence
+    </span>
+    <div style="margin-left:auto;background:rgba(66,153,225,0.1);border:1px solid #2d5a8a;
+      border-radius:20px;padding:3px 10px;">
+      <span style="color:#90cdf4;font-size:0.72rem;">{_n_active_states} active states</span>
+    </div>
+  </div>
+
+  <!-- 4-stat grid -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+
+    <!-- Stat 1: Top state -->
+    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
+      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+        👑 Revenue Leader
+      </div>
+      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{top_state['State']}</div>
+      <div style="color:#48bb78;font-size:0.8rem;margin-top:4px;font-weight:600;">
+        ${top_state['Sales']:,.0f}
+      </div>
+      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
+        <div style="width:{min(state_share*2, 100):.0f}%;height:4px;background:linear-gradient(90deg,#4299e1,#63b3ed);border-radius:4px;"></div>
+      </div>
+      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">{state_share:.1f}% of total</div>
+    </div>
+
+    <!-- Stat 2: Top-5 concentration -->
+    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
+      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+        🎯 Top-5 Concentration
+      </div>
+      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_top5_share:.1f}%</div>
+      <div style="font-size:0.78rem;margin-top:4px;font-weight:600;color:{_concentration_cls};">
+        {_concentration_lbl}
+      </div>
+      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
+        <div style="width:{_top5_share:.0f}%;height:4px;background:linear-gradient(90deg,{_concentration_cls},{_concentration_cls}88);border-radius:4px;"></div>
+      </div>
+      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">5 states drive majority</div>
+    </div>
+
+    <!-- Stat 3: States above average -->
+    <div style="background:rgba(66,153,225,0.08);border:1px solid #1e3a5f;border-radius:10px;padding:14px 12px;">
+      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+        📈 Above-Average States
+      </div>
+      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_above_avg_states} <span style="font-size:0.8rem;color:#718096;">/ {_n_active_states}</span></div>
+      <div style="color:#ed8936;font-size:0.78rem;margin-top:4px;font-weight:600;">
+        Avg ${_avg_state_sales:,.0f}
+      </div>
+      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
+        <div style="width:{_above_avg_states/_n_active_states*100 if _n_active_states else 0:.0f}%;height:4px;background:linear-gradient(90deg,#ed8936,#f6ad55);border-radius:4px;"></div>
+      </div>
+      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">{_above_avg_states/_n_active_states*100 if _n_active_states else 0:.0f}% outperforming</div>
+    </div>
+
+    <!-- Stat 4: Weakest link -->
+    <div style="background:rgba(233,69,96,0.06);border:1px solid #3d1a22;border-radius:10px;padding:14px 12px;">
+      <div style="color:#718096;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">
+        ⚠️ Lowest Performer
+      </div>
+      <div style="color:#fff;font-size:1.15rem;font-weight:700;line-height:1.2;">{_bottom_state['State']}</div>
+      <div style="color:#e94560;font-size:0.8rem;margin-top:4px;font-weight:600;">
+        ${_bottom_state['Sales']:,.0f}
+      </div>
+      <div style="margin-top:8px;background:rgba(255,255,255,0.06);border-radius:4px;height:4px;">
+        <div style="width:{_bottom_state['Sales']/top_state['Sales']*100 if top_state['Sales'] else 0:.1f}%;height:4px;background:linear-gradient(90deg,#e94560,#fc8181);border-radius:4px;"></div>
+      </div>
+      <div style="color:#90cdf4;font-size:0.7rem;margin-top:4px;">
+        {_bottom_state['Sales']/top_state['Sales']*100 if top_state['Sales'] else 0:.1f}% of leader's sales
+      </div>
+    </div>
+
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
