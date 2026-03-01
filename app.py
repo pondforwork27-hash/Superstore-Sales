@@ -436,7 +436,14 @@ st.markdown("---")
 # ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
-all_state_sales = df.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
+# Map base: respect year/category/segment but NOT region-card or clicked_state
+# so all states remain visible on the map for geographic context
+_map_base = df.copy()
+if sel_year:     _map_base = _map_base[_map_base['Year'].isin(sel_year)]
+if sel_category: _map_base = _map_base[_map_base['Category'].isin(sel_category)]
+if sel_segment:  _map_base = _map_base[_map_base['Segment'].isin(sel_segment)]
+
+all_state_sales = _map_base.groupby(['State', 'State Code'])['Sales'].sum().reset_index()
 _map_total = all_state_sales['Sales'].sum()
 all_state_sales['Share'] = all_state_sales['Sales'] / _map_total * 100
 
@@ -499,7 +506,7 @@ if _sel_regions:
     )
     for _sreg in _sel_regions:
         _reg_df = all_state_sales[all_state_sales['State'].isin(
-            df[df['Region'] == _sreg]['State'].unique()
+            _map_base[_map_base['Region'] == _sreg]['State'].unique()
         )].copy()
         if not _reg_df.empty:
             _fcol   = _region_fill_colors.get(_sreg, [[0,'rgba(255,255,255,0.1)'],[1,'rgba(255,255,255,0.5)']])
@@ -1100,12 +1107,9 @@ st.markdown("---")
 # ── CITIES TABLE ──────────────────────────────────────────────────────────────
 st.header("🏙️ Top Cities by Sales")
 
-_city_mask = pd.Series([True] * len(df), index=df.index)
-if st.session_state.sel_region_card: _city_mask &= df['Region'].isin(st.session_state.sel_region_card)
-if sel_category: _city_mask &= df['Category'].isin(sel_category)
-if sel_segment:  _city_mask &= df['Segment'].isin(sel_segment)
-if st.session_state.clicked_state: _city_mask &= df['State'] == st.session_state.clicked_state
-_city_base = df[_city_mask]
+# City table uses filtered_df which already has all active filters applied
+# (year, category, segment, region cards, clicked state)
+_city_base = filtered_df
 
 _agg = _city_base.groupby(['City', 'State']).agg(
     **{
