@@ -556,19 +556,19 @@ border:1px solid {_lbl[1]};border-radius:20px;padding:5px 14px;margin-bottom:10p
 # Hidden trigger buttons for geo card clicks (styled invisible, triggered by JS postMessage)
 _geo_btn_cols = st.columns(4)
 with _geo_btn_cols[0]:
-    if st.button("__geo_leader__",    key="geo_btn_leader",    label_visibility="collapsed"):
+    if st.button("geo_leader",    key="geo_btn_leader",    use_container_width=True):
         st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'leader' else 'leader'
         st.rerun()
 with _geo_btn_cols[1]:
-    if st.button("__geo_top5__",      key="geo_btn_top5",      label_visibility="collapsed"):
+    if st.button("geo_top5",      key="geo_btn_top5",      use_container_width=True):
         st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'top5' else 'top5'
         st.rerun()
 with _geo_btn_cols[2]:
-    if st.button("__geo_above_avg__", key="geo_btn_above_avg", label_visibility="collapsed"):
+    if st.button("geo_above_avg", key="geo_btn_above_avg", use_container_width=True):
         st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'above_avg' else 'above_avg'
         st.rerun()
 with _geo_btn_cols[3]:
-    if st.button("__geo_weakest__",   key="geo_btn_weakest",   label_visibility="collapsed"):
+    if st.button("geo_weakest",   key="geo_btn_weakest",   use_container_width=True):
         st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'weakest' else 'weakest'
         st.rerun()
 
