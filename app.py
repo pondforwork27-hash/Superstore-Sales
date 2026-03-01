@@ -608,8 +608,13 @@ _pip_html = ''.join([
     for i in range(min(_n_active_states, 30))
 ])
 
-st.markdown(f"""
-<div style="background:linear-gradient(160deg,#080f1e 0%,#0c1a30 60%,#080f1e 100%);border:1px solid #162640;border-radius:16px;padding:22px 26px 18px;margin-bottom:12px;position:relative;overflow:hidden;">
+_geo_html = (
+    "<!DOCTYPE html><html><head><meta charset=\'utf-8\'>"
+    "<style>"
+    "body{margin:0;padding:0;background:transparent;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;}"
+    "@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}"
+    "</style></head><body>"
+) + f"""<div style="background:linear-gradient(160deg,#080f1e 0%,#0c1a30 60%,#080f1e 100%);border:1px solid #162640;border-radius:16px;padding:22px 26px 18px;margin-bottom:12px;position:relative;overflow:hidden;">
 
   <!-- glow -->
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 80% 0%,rgba(66,153,225,0.07) 0%,transparent 60%),radial-gradient(ellipse at 10% 100%,rgba(99,179,237,0.04) 0%,transparent 50%);pointer-events:none;"></div>
@@ -689,8 +694,9 @@ st.markdown(f"""
     </div>
 
   </div>
-</div>
-""", unsafe_allow_html=True)
+</div>""" + "</body></html>"
+
+_stc.html(_geo_html, height=230, scrolling=False)
 
 st.markdown("---")
 
