@@ -445,24 +445,6 @@ _gmf_labels = {
     'above_avg': ('📈', '#9f7aea', 'Above-average states highlighted'),
     'weakest':   ('⚠️', '#e94560', 'Lowest performer highlighted'),
 }
-if st.session_state.geo_map_filter:
-    _lbl = _gmf_labels.get(st.session_state.geo_map_filter, ('🔍','#4299e1','Filter active'))
-    _gcol1, _gcol2 = st.columns([5,1])
-    with _gcol1:
-        st.markdown(
-            f'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(66,153,225,0.1);'
-            f'border:1px solid {_lbl[1]};border-radius:20px;padding:5px 14px;margin-bottom:10px;">'
-            f'<span style="font-size:1rem;">{_lbl[0]}</span>'
-            f'<span style="color:{_lbl[1]};font-weight:600;font-size:0.85rem;">{_lbl[2]}</span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with _gcol2:
-        if st.button("✕ Clear highlight", key="clear_geo_filter", use_container_width=True):
-            st.session_state.geo_map_filter = None
-            st.rerun()
-
-
 
 # Map base: respect year/category/segment but NOT region-card or clicked_state
 # so all states remain visible on the map for geographic context
