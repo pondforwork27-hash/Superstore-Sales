@@ -671,7 +671,7 @@ _geo_html = (
     "function sendFilter(f){window.parent.postMessage({geoFilter:f},'*');}"
     "</script>"
     "</head><body>"
-) + f"""<div style="background:linear-gradient(160deg,#080f1e 0%,#0c1a30 60%,#080f1e 100%);border:1px solid #162640;border-radius:16px;padding:22px 26px 18px;margin-bottom:12px;position:relative;overflow:hidden;">
+) + f"""<div style="background:linear-gradient(160deg,#080f1e 0%,#0c1a30 60%,#080f1e 100%);border:1px solid #162640;border-radius:16px;padding:28px 28px 24px;margin-bottom:12px;position:relative;overflow:hidden;">
 
   <!-- glow -->
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 80% 0%,rgba(66,153,225,0.07) 0%,transparent 60%),radial-gradient(ellipse at 10% 100%,rgba(99,179,237,0.04) 0%,transparent 50%);pointer-events:none;"></div>
@@ -689,11 +689,11 @@ _geo_html = (
     <!-- Card 1: Revenue Leader -->
     <div class="geo-card-click" onclick="sendFilter('leader')" style="background:linear-gradient(145deg,#0d2240,#112a50);border:1px solid #1e4a80;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#4299e1;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#4299e1,#90cdf4,transparent);"></div>
-      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:12px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#4299e1;flex-shrink:0;"></div>Revenue Leader
       </div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1;">{_ts_name}</div>
-      <div style="font-size:0.78rem;font-weight:600;margin-top:3px;color:#48bb78;">${_ts_sales:,.0f}</div>
+      <div style="font-size:1.55rem;font-weight:800;color:#fff;line-height:1.1;">{_ts_name}</div>
+      <div style="font-size:0.88rem;font-weight:600;margin-top:5px;color:#48bb78;">${_ts_sales:,.0f}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:5px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="color:#4a6580;font-size:0.6rem;width:32px;flex-shrink:0;">Leader</span>
@@ -710,50 +710,50 @@ _geo_html = (
           <span style="color:#4a6580;font-size:0.6rem;width:34px;text-align:right;">{_avg_share:.1f}%</span>
         </div>
       </div>
-      <div style="font-size:0.67rem;color:#4a6580;margin-top:10px;font-weight:500;">{_gap_ratio:.0f}x larger than weakest state</div>
+      <div style="font-size:0.72rem;color:#4a6580;margin-top:12px;font-weight:500;">{_gap_ratio:.0f}x larger than weakest state</div>
     </div>
 
     <!-- Card 2: Concentration -->
     <div class="geo-card-click" onclick="sendFilter('top5')" style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#ed8936;">
-      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:12px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:{_conc_color};flex-shrink:0;"></div>Concentration
       </div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1;">{_top5_share:.0f}<span style="font-size:0.75rem;color:#718096;font-weight:500;">%</span></div>
-      <div style="font-size:0.78rem;font-weight:600;margin-top:3px;color:{_conc_color};">Top-5 share</div>
-      <div style="margin-top:12px;width:54px;height:54px;border-radius:50%;background:conic-gradient({_conc_color} 0% {_top5_share:.0f}%,rgba(255,255,255,0.06) {_top5_share:.0f}% 100%);display:flex;align-items:center;justify-content:center;">
-        <div style="width:38px;height:38px;border-radius:50%;background:#0c1a30;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:{_conc_color};">{_top5_share:.0f}%</div>
+      <div style="font-size:1.55rem;font-weight:800;color:#fff;line-height:1.1;">{_top5_share:.0f}<span style="font-size:0.75rem;color:#718096;font-weight:500;">%</span></div>
+      <div style="font-size:0.88rem;font-weight:600;margin-top:5px;color:{_conc_color};">Top-5 share</div>
+      <div style="margin-top:14px;width:70px;height:70px;border-radius:50%;background:conic-gradient({_conc_color} 0% {_top5_share:.0f}%,rgba(255,255,255,0.06) {_top5_share:.0f}% 100%);display:flex;align-items:center;justify-content:center;">
+        <div style="width:50px;height:50px;border-radius:50%;background:#0c1a30;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:{_conc_color};">{_top5_share:.0f}%</div>
       </div>
       <div style="font-size:0.63rem;color:{_conc_color};margin-top:8px;font-weight:500;">{_conc_lbl}</div>
     </div>
 
     <!-- Card 3: Market Spread -->
     <div class="geo-card-click" onclick="sendFilter('above_avg')" style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#9f7aea;">
-      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:12px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#9f7aea;flex-shrink:0;"></div>Market Spread
       </div>
-      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1;">{_above_avg_states}<span style="font-size:0.75rem;color:#718096;font-weight:400;"> /{_n_active_states}</span></div>
-      <div style="font-size:0.78rem;font-weight:600;margin-top:3px;color:#9f7aea;">States above avg</div>
+      <div style="font-size:1.55rem;font-weight:800;color:#fff;line-height:1.1;">{_above_avg_states}<span style="font-size:0.75rem;color:#718096;font-weight:400;"> /{_n_active_states}</span></div>
+      <div style="font-size:0.88rem;font-weight:600;margin-top:5px;color:#9f7aea;">States above avg</div>
       <div style="margin-top:12px;display:flex;gap:2px;flex-wrap:wrap;">{_pip_html}</div>
-      <div style="font-size:0.67rem;color:#4a6580;margin-top:8px;font-weight:500;">{_pct_above:.0f}% outperforming avg ${_avg_state_sales/1000:.0f}K</div>
+      <div style="font-size:0.72rem;color:#4a6580;margin-top:10px;font-weight:500;">{_pct_above:.0f}% outperforming avg ${_avg_state_sales/1000:.0f}K</div>
     </div>
 
     <!-- Card 4: Needs Attention -->
     <div class="geo-card-click" onclick="sendFilter('weakest')" style="background:rgba(233,69,96,0.04);border:1px solid #3d1020;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#e94560;">
-      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:12px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#e94560;flex-shrink:0;"></div>Needs Attention
       </div>
-      <div style="font-size:1.05rem;font-weight:800;color:#fff;line-height:1.1;">{_bs_name}</div>
-      <div style="font-size:0.78rem;font-weight:600;margin-top:3px;color:#e94560;">${_bs_sales:,.0f}</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#fff;line-height:1.1;">{_bs_name}</div>
+      <div style="font-size:0.88rem;font-weight:600;margin-top:5px;color:#e94560;">${_bs_sales:,.0f}</div>
       <div style="margin-top:12px;background:rgba(255,255,255,0.05);border-radius:99px;height:3px;overflow:hidden;">
         <div style="width:{_bs_pct:.1f}%;height:3px;border-radius:99px;background:linear-gradient(90deg,#e94560,#fc8181);"></div>
       </div>
-      <div style="font-size:0.67rem;color:#4a6580;margin-top:8px;font-weight:500;">Only {_bs_pct:.1f}% of leader — high opportunity gap</div>
+      <div style="font-size:0.72rem;color:#4a6580;margin-top:10px;font-weight:500;">Only {_bs_pct:.1f}% of leader — high opportunity gap</div>
     </div>
 
   </div>
 </div>""" + "</body></html>"
 
-_stc.html(_geo_html, height=230, scrolling=False)
+_stc.html(_geo_html, height=310, scrolling=False)
 
 # ── Hidden trigger buttons (CSS-hidden, clicked programmatically via JS) ──────
 _gmf = st.session_state.geo_map_filter
