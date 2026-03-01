@@ -178,14 +178,13 @@ df = load_data()
 
 # ── Session state init ────────────────────────────────────────────────────────
 defaults = {
-    'clicked_state':  None,
-    'clicked_city':   None,
-    'sel_region':     [],
-    'sel_category':   [],
-    'sel_segment':    [],
-    'sel_year':       [],
+    'clicked_state': None,
+    'clicked_city':  None,
+    'sel_region':    [],
+    'sel_category':  [],
+    'sel_segment':   [],
+    'sel_year':      [],
     'sel_region_card': [],
-    'geo_map_filter': None,   # 'leader' | 'top5' | 'above_avg' | 'weakest'
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -438,140 +437,6 @@ st.markdown("---")
 # ── MAP ───────────────────────────────────────────────────────────────────────
 st.subheader("📍 Sales Distribution by State  ·  Click a state to drill down")
 
-# Geo filter badge + clear
-_gmf_labels = {
-    'leader':    ('👑', '#4299e1', 'Revenue Leader highlighted'),
-    'top5':      ('🎯', '#ed8936', 'Top-5 states highlighted'),
-    'above_avg': ('📈', '#9f7aea', 'Above-average states highlighted'),
-    'weakest':   ('⚠️', '#e94560', 'Lowest performer highlighted'),
-}
-if st.session_state.geo_map_filter:
-    _lbl = _gmf_labels.get(st.session_state.geo_map_filter, ('🔍','#4299e1','Filter active'))
-    _gcol1, _gcol2 = st.columns([5,1])
-    with _gcol1:
-        st.markdown(
-            f'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(66,153,225,0.1);'
-            f'border:1px solid {_lbl[1]};border-radius:20px;padding:5px 14px;margin-bottom:10px;">'
-            f'<span style="font-size:1rem;">{_lbl[0]}</span>'
-            f'<span style="color:{_lbl[1]};font-weight:600;font-size:0.85rem;">{_lbl[2]}</span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    with _gcol2:
-        if st.button("✕ Clear highlight", key="clear_geo_filter", use_container_width=True):
-            st.session_state.geo_map_filter = None
-            st.rerun()
-
-# Hidden trigger buttons — clicked via JS postMessage from the geo banner iframe
-_hidden_geo_css = """<style>
-div[data-testid="stButton"][id^="geo_btn_"] > button,
-button[kind="secondary"][data-testid="baseButton-secondary"]:has(~ [data-testid="stButtonLabel"]:empty) { display:none !important; }
-</style>"""
-st.markdown(_hidden_geo_css, unsafe_allow_html=True)
-
-_geo_btn_cols = st.columns(4)
-with _geo_btn_cols[0]:
-    if st.button("geo_leader",    key="geo_btn_leader",    use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == "leader" else "leader"
-        st.rerun()
-with _geo_btn_cols[1]:
-    if st.button("geo_top5",      key="geo_btn_top5",      use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == "top5" else "top5"
-        st.rerun()
-with _geo_btn_cols[2]:
-    if st.button("geo_above_avg", key="geo_btn_above_avg", use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == "above_avg" else "above_avg"
-        st.rerun()
-with _geo_btn_cols[3]:
-    if st.button("geo_weakest",   key="geo_btn_weakest",   use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == "weakest" else "weakest"
-        st.rerun()
-
-# JS: hide the trigger buttons visually + listen for postMessage from geo banner iframe
-import streamlit.components.v1 as _stcv1
-_stcv1.html("""<script>
-(function() {
-  var BTNS = {
-    'leader':    'geo_leader',
-    'top5':      'geo_top5',
-    'above_avg': 'geo_above_avg',
-    'weakest':   'geo_weakest'
-  };
-
-  // Hide trigger buttons
-  function hideBtns() {
-    var doc = window.parent.document;
-    Object.values(BTNS).forEach(function(label) {
-      doc.querySelectorAll('button').forEach(function(btn) {
-        if (btn.innerText && btn.innerText.trim() === label) {
-          btn.style.setProperty('display','none','important');
-          btn.parentElement.style.setProperty('display','none','important');
-        }
-      });
-    });
-  }
-  hideBtns();
-  new MutationObserver(hideBtns).observe(window.parent.document.body, {childList:true, subtree:true});
-
-  // Listen for postMessage from the geo banner iframe
-  window.parent.addEventListener('message', function(e) {
-    var filter = e.data && e.data.geoFilter;
-    if (!filter) return;
-    var label = BTNS[filter];
-    if (!label) return;
-    var doc = window.parent.document;
-    doc.querySelectorAll('button').forEach(function(btn) {
-      if (btn.innerText && btn.innerText.trim() === label) {
-        btn.style.removeProperty('display');
-        btn.click();
-        setTimeout(function() { btn.style.setProperty('display','none','important'); }, 100);
-      }
-    });
-  });
-})();
-</script>""", height=0)
-
-
-# Geo filter badge + clear
-_gmf_labels = {
-    'leader':    ('👑', '#4299e1', 'Revenue Leader highlighted'),
-    'top5':      ('🎯', '#ed8936', 'Top-5 states highlighted'),
-    'above_avg': ('📈', '#9f7aea', 'Above-average states highlighted'),
-    'weakest':   ('⚠️', '#e94560', 'Lowest performer highlighted'),
-}
-if st.session_state.geo_map_filter:
-    _lbl = _gmf_labels.get(st.session_state.geo_map_filter, ('🔍','#4299e1','Filter active'))
-    _gcol1, _gcol2 = st.columns([5,1])
-    with _gcol1:
-        st.markdown(f'''<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(66,153,225,0.1);
-border:1px solid {_lbl[1]};border-radius:20px;padding:5px 14px;margin-bottom:10px;">
-<span style="font-size:1rem;">{_lbl[0]}</span>
-<span style="color:{_lbl[1]};font-weight:600;font-size:0.85rem;">{_lbl[2]}</span>
-</div>''', unsafe_allow_html=True)
-    with _gcol2:
-        if st.button("✕ Clear highlight", key="clear_geo_filter", use_container_width=True):
-            st.session_state.geo_map_filter = None
-            st.rerun()
-
-# Hidden trigger buttons for geo card clicks (styled invisible, triggered by JS postMessage)
-_geo_btn_cols = st.columns(4)
-with _geo_btn_cols[0]:
-    if st.button("geo_leader",    key="geo_btn_leader",    use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'leader' else 'leader'
-        st.rerun()
-with _geo_btn_cols[1]:
-    if st.button("geo_top5",      key="geo_btn_top5",      use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'top5' else 'top5'
-        st.rerun()
-with _geo_btn_cols[2]:
-    if st.button("geo_above_avg", key="geo_btn_above_avg", use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'above_avg' else 'above_avg'
-        st.rerun()
-with _geo_btn_cols[3]:
-    if st.button("geo_weakest",   key="geo_btn_weakest",   use_container_width=True):
-        st.session_state.geo_map_filter = None if st.session_state.geo_map_filter == 'weakest' else 'weakest'
-        st.rerun()
-
 # Map base: respect year/category/segment but NOT region-card or clicked_state
 # so all states remain visible on the map for geographic context
 _map_base = df.copy()
@@ -692,42 +557,6 @@ if st.session_state.clicked_state:
             marker_line_width=3, hoverinfo='skip',
         ))
 
-# ── Geo-card filter highlight overlay ────────────────────────────────────────
-_gmf = st.session_state.geo_map_filter
-if _gmf:
-    if _gmf == 'leader':
-        _hl_states = [top_state['State']]
-        _hl_color  = '#4299e1'
-    elif _gmf == 'top5':
-        _hl_states = state_sales.nlargest(5, 'Sales')['State'].tolist()
-        _hl_color  = '#ed8936'
-    elif _gmf == 'above_avg':
-        _avg_s     = state_sales['Sales'].mean()
-        _hl_states = state_sales[state_sales['Sales'] > _avg_s]['State'].tolist()
-        _hl_color  = '#9f7aea'
-    elif _gmf == 'weakest':
-        _hl_states = [state_sales.sort_values('Sales').iloc[0]['State']]
-        _hl_color  = '#e94560'
-    else:
-        _hl_states = []
-        _hl_color  = '#ffffff'
-
-    _hl_df = all_state_sales[all_state_sales['State'].isin(_hl_states)]
-    if not _hl_df.empty:
-        fig_map.add_trace(go.Choropleth(
-            locations=_hl_df['State Code'].tolist(),
-            z=_hl_df['Sales'].tolist(),
-            locationmode="USA-states",
-            colorscale=[[0, _hl_color + '55'], [1, _hl_color + 'cc']],
-            showscale=False,
-            marker_line_color=_hl_color,
-            marker_line_width=3,
-            text=_hl_df['State'].tolist(),
-            customdata=_hl_df[['Share']].values,
-            hovertemplate="<b>%{text}</b><br>Sales: $%{z:,.0f}<br>Share: %{customdata[0]:.1f}%<extra></extra>",
-            name='highlighted',
-        ))
-
 fig_map.update_layout(
     margin={"r":0,"t":0,"l":0,"b":0}, geo_bgcolor='rgba(0,0,0,0)',
     coloraxis_colorbar=dict(title="Sales ($)", tickprefix="$"),
@@ -779,21 +608,12 @@ _pip_html = ''.join([
     for i in range(min(_n_active_states, 30))
 ])
 
-_geo_active = st.session_state.geo_map_filter or ''
-
 _geo_html = (
     "<!DOCTYPE html><html><head><meta charset=\'utf-8\'>"
     "<style>"
     "body{margin:0;padding:0;background:transparent;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;}"
     "@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}"
-    ".geo-card-click{cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;}"
-    ".geo-card-click:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.5);}"
-    ".geo-card-click.active{outline:2px solid currentColor;outline-offset:2px;}"
-    "</style>"
-    "<script>"
-    "function sendFilter(f){window.parent.postMessage({geoFilter:f},'*');}"
-    "</script>"
-    "</head><body>"
+    "</style></head><body>"
 ) + f"""<div style="background:linear-gradient(160deg,#080f1e 0%,#0c1a30 60%,#080f1e 100%);border:1px solid #162640;border-radius:16px;padding:22px 26px 18px;margin-bottom:12px;position:relative;overflow:hidden;">
 
   <!-- glow -->
@@ -810,7 +630,7 @@ _geo_html = (
   <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:10px;">
 
     <!-- Card 1: Revenue Leader -->
-    <div class="geo-card-click" onclick="sendFilter('leader')" style="background:linear-gradient(145deg,#0d2240,#112a50);border:1px solid #1e4a80;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#4299e1;">
+    <div style="background:linear-gradient(145deg,#0d2240,#112a50);border:1px solid #1e4a80;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#4299e1,#90cdf4,transparent);"></div>
       <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#4299e1;flex-shrink:0;"></div>Revenue Leader
@@ -837,7 +657,7 @@ _geo_html = (
     </div>
 
     <!-- Card 2: Concentration -->
-    <div class="geo-card-click" onclick="sendFilter('top5')" style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#ed8936;">
+    <div style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;">
       <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:{_conc_color};flex-shrink:0;"></div>Concentration
       </div>
@@ -850,7 +670,7 @@ _geo_html = (
     </div>
 
     <!-- Card 3: Market Spread -->
-    <div class="geo-card-click" onclick="sendFilter('above_avg')" style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#9f7aea;">
+    <div style="background:rgba(255,255,255,0.025);border:1px solid #162640;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;">
       <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#9f7aea;flex-shrink:0;"></div>Market Spread
       </div>
@@ -861,7 +681,7 @@ _geo_html = (
     </div>
 
     <!-- Card 4: Needs Attention -->
-    <div class="geo-card-click" onclick="sendFilter('weakest')" style="background:rgba(233,69,96,0.04);border:1px solid #3d1020;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;color:#e94560;">
+    <div style="background:rgba(233,69,96,0.04);border:1px solid #3d1020;border-radius:12px;padding:16px 14px 14px;position:relative;overflow:hidden;">
       <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:#4a6580;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
         <div style="width:5px;height:5px;border-radius:50%;background:#e94560;flex-shrink:0;"></div>Needs Attention
       </div>
